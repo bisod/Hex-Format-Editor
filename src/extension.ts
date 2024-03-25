@@ -1,26 +1,63 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
-import * as vscode from 'vscode';
+import TelemetryReporter from "@vscode/extension-telemetry";
+import * as vscode from "vscode";
+import { DataInspectorView } from "./dataInspectorView";
+import { HexEditorProvider } from "./hexEditorProvider";
+import { HexEditorRegistry } from "./hexEditorRegistry";
+import StatusSelectionCount from "./statusSelectionCount";
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
-
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "hex-format-editor" is now active!');
-
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('hex-format-editor.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from hex-format-editor!');
-	});
-
-	context.subscriptions.push(disposable);
+function readConfigFromPackageJson(extension: vscode.Extension<any>): {
+	extId: string;
+	version: string;
+	aiKey: string;
+} {
+	const packageJSON = extension.packageJSON;
+	return {
+		extId: `${packageJSON.publisher}.${packageJSON.name}`,
+		version: packageJSON.version,
+		aiKey: packageJSON.aiKey,
+	};
 }
 
-// This method is called when your extension is deactivated
-export function deactivate() {}
+function reopenWithHexEditor() {
+	const activeTabInput = vscode.window.tabGroups.activeTabGroup.activeTab?.input as {
+		[key: string]: any;
+		uri: vscode.Uri | undefined;
+	};
+	if (activeTabInput.uri) {
+		vscode.commands.executeCommand("vscode.openWith", activeTabInput.uri, "formatEditor.hexedit");
+	}
+}
+
+export function activate(context: vscode.ExtensionContext): void {
+	const registry = new HexEditorRegistry();
+	// Register the data inspector as a separate view on the side
+	const dataInspectorProvider = new DataInspectorView(context.extensionUri, registry);
+	const configValues = readConfigFromPackageJson(context.extension);
+	context.subscriptions.push(
+		registry,
+		dataInspectorProvider,
+		vscode.window.registerWebviewViewProvider(DataInspectorView.viewType, dataInspectorProvider),
+	);
+
+	const telemetryReporter = new TelemetryReporter(
+		configValues.extId,
+		configValues.version,
+		configValues.aiKey,
+	);
+	context.subscriptions.push(telemetryReporter);
+	const openWithCommand = vscode.commands.registerCommand(
+		"formatEditor.openFile",
+		reopenWithHexEditor,
+	);
+
+	context.subscriptions.push(new StatusSelectionCount(registry));
+	context.subscriptions.push(openWithCommand);
+	context.subscriptions.push(telemetryReporter);
+	context.subscriptions.push(
+		HexEditorProvider.register(context, telemetryReporter, dataInspectorProvider, registry),
+	);
+}
+
+export function deactivate(): void {
+	/* no-op */
+}
