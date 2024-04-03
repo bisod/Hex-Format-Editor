@@ -22,72 +22,74 @@ import { VsProgressIndicator } from "./vscodeUi";
 const style = throwOnUndefinedAccessInDev(_style);
 
 const Root: React.FC = () => {
-	const setDimensions = useSetRecoilState(select.dimensions);
-	const theme = useTheme();
+  const setDimensions = useSetRecoilState(select.dimensions);
+  const theme = useTheme();
 
-	useLayoutEffect(() => {
-		const applyDimensions = () =>
-			setDimensions({
-				width: window.innerWidth,
-				height: window.innerHeight,
-				rowPxHeight: parseInt(theme["font-size"]) + 8,
-			});
+  useLayoutEffect(() => {
+    const applyDimensions = () =>
+      setDimensions({
+        width: window.innerWidth,
+        height: window.innerHeight,
+        rowPxHeight: parseInt(theme["font-size"]) + 8,
+      });
 
-		window.addEventListener("resize", applyDimensions);
-		applyDimensions();
-		return () => window.removeEventListener("resize", applyDimensions);
-	}, [theme]);
+    window.addEventListener("resize", applyDimensions);
+    applyDimensions();
+    return () => window.removeEventListener("resize", applyDimensions);
+  }, [theme]);
 
-	return (
-		<Suspense fallback={<VsProgressIndicator />}>
-			<Editor />
-		</Suspense>
-	);
+  return (
+    <Suspense fallback={<VsProgressIndicator />}>
+      <Editor />
+    </Suspense>
+  );
 };
 
 const Editor: React.FC = () => {
-	const dimensions = useRecoilValue(select.dimensions);
-	const setEdit = useSetRecoilState(select.edits);
-	const isReadonly = useRecoilValue(select.isReadonly);
-	const inspectorLocation = useRecoilValue(select.dataInspectorLocation);
-	const ctx = useMemo(() => new DisplayContext(setEdit, isReadonly), []);
+  const dimensions = useRecoilValue(select.dimensions);
+  const setEdit = useSetRecoilState(select.edits);
+  const isReadonly = useRecoilValue(select.isReadonly);
+  const inspectorLocation = useRecoilValue(select.dataInspectorLocation);
+  const ctx = useMemo(() => new DisplayContext(setEdit, isReadonly), []);
 
-	const isLargeFile = useRecoilValue(select.isLargeFile);
-	const [bypassLargeFilePrompt, setBypassLargeFile] = useRecoilState(select.bypassLargeFilePrompt);
+  const isLargeFile = useRecoilValue(select.isLargeFile);
+  const [bypassLargeFilePrompt, setBypassLargeFile] = useRecoilState(select.bypassLargeFilePrompt);
 
-	if (isLargeFile && !bypassLargeFilePrompt) {
-		return (
-			<div>
-				<p>
-					{strings.openLargeFileWarning}{" "}
-					<a id="open-anyway" role="button" onClick={() => setBypassLargeFile(true)}>
-						{strings.openAnyways}
-					</a>
-				</p>
-			</div>
-		);
-	}
+  if (isLargeFile && !bypassLargeFilePrompt) {
+    return (
+      <div>
+        <p>
+          {strings.openLargeFileWarning}{" "}
+          <a id="open-anyway" role="button" onClick={() => setBypassLargeFile(true)}>
+            {strings.openAnyways}
+          </a>
+        </p>
+      </div>
+    );
+  }
 
-	return (
-		<DataDisplayContext.Provider value={ctx}>
-			<div
-				className={style.container}
-				style={{ "--cell-size": `${dimensions.rowPxHeight}px` } as React.CSSProperties}
-			>
-				<FindWidget />
-				<SettingsGear />
-				<DataHeader />
-				<ScrollContainer />
-				<ReadonlyWarning />
-				{inspectorLocation === InspectorLocation.Hover && <DataInspectorHover />}
-			</div>
-		</DataDisplayContext.Provider>
-	);
+  return (
+    <DataDisplayContext.Provider value={ctx}>
+      <h2 style={{ textAlign: "center" }}>Hex Format Editor</h2>
+
+      <div
+        className={style.container}
+        style={{ "--cell-size": `${dimensions.rowPxHeight}px` } as React.CSSProperties}
+      >
+        <FindWidget />
+        <SettingsGear />
+        <DataHeader />
+        <ScrollContainer />
+        <ReadonlyWarning />
+        {inspectorLocation === InspectorLocation.Hover && <DataInspectorHover />}
+      </div>
+    </DataDisplayContext.Provider>
+  );
 };
 
 render(
-	<RecoilRoot>
-		<Root />
-	</RecoilRoot>,
-	document.body,
+  <RecoilRoot>
+    <Root />
+  </RecoilRoot>,
+  document.body,
 );
