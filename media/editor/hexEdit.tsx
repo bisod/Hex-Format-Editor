@@ -70,7 +70,7 @@ const Editor: React.FC = () => {
 
   return (
     <DataDisplayContext.Provider value={ctx}>
-      <h2 style={{ textAlign: "center" }}>Hex Format Editor</h2>
+      <h2 style={{ textAlign: "center" }}>Hex Format Editor Demo</h2>
 
       <div
         className={style.container}
