@@ -40,8 +40,28 @@ const Root: React.FC = () => {
 
   return (
     <Suspense fallback={<VsProgressIndicator />}>
-      <Editor />
+      <h1 style={{ textAlign: "center" }}>HEX-Format-Editor</h1>
+      {/* 包裹菜单栏和编辑器组件 */}
+      <div style={{ display: "flex", height: "100%" }}>
+        {/* 左侧菜单栏 */}
+        <Menu />
+        {/* 右侧编辑器 */}
+        <Editor />
+      </div>
     </Suspense>
+  );
+};
+
+const Menu: React.FC = () => {
+  return (
+    <div style={{ width: "200px", backgroundColor: "#f0f0f0", padding: "20px" }}>
+      {/* 这里放置菜单项 */}
+      <ul>
+        <li>菜单项1</li>
+        <li>菜单项2</li>
+        <li>菜单项3</li>
+      </ul>
+    </div>
   );
 };
 
@@ -70,8 +90,6 @@ const Editor: React.FC = () => {
 
   return (
     <DataDisplayContext.Provider value={ctx}>
-      <h2 style={{ textAlign: "center" }}>Hex Format Editor subDemo</h2>
-
       <div
         className={style.container}
         style={{ "--cell-size": `${dimensions.rowPxHeight}px` } as React.CSSProperties}

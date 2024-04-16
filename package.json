@@ -27,7 +27,7 @@
       {
         "title": "%name%",
         "properties": {
-          "hexeditor.inspectorType": {
+          "hexformateditor.inspectorType": {
             "type": "string",
             "enum": [
               "aside",
@@ -35,44 +35,44 @@
               "sidebar"
             ],
             "default": "aside",
-            "description": "%hexeditor.inspectorType%"
+            "description": "%hexformateditor.inspectorType%"
           },
-          "hexeditor.maxFileSize": {
+          "hexformateditor.maxFileSize": {
             "type": "number",
             "minimum": 0,
             "default": 10,
-            "description": "%hexeditor.maxFileSize%"
+            "description": "%hexformateditor.maxFileSize%"
           },
-          "hexeditor.dataInspector.autoReveal": {
+          "hexformateditor.dataInspector.autoReveal": {
             "type": "boolean",
             "default": true,
-            "description": "%hexeditor.dataInspector.autoReveal%"
+            "description": "%hexformateditor.dataInspector.autoReveal%"
           },
-          "hexeditor.defaultEndianness": {
+          "hexformateditor.defaultEndianness": {
             "type": "string",
             "default": "little",
             "enum": [
               "little",
               "big"
             ],
-            "description": "%hexeditor.defaultEndianness%"
+            "description": "%hexformateditor.defaultEndianness%"
           },
-          "hexeditor.columnWidth": {
+          "hexformateditor.columnWidth": {
             "type": "integer",
             "default": 16,
             "minimum": 1,
             "maximum": 512,
-            "description": "%hexeditor.columnWidth%"
+            "description": "%hexformateditor.columnWidth%"
           },
-          "hexeditor.showDecodedText": {
+          "hexformateditor.showDecodedText": {
             "type": "boolean",
             "default": true,
-            "description": "%hexeditor.showDecodedText%"
+            "description": "%hexformateditor.showDecodedText%"
           },
-          "hexeditor.showOpenFileButton": {
+          "hexformateditor.showOpenFileButton": {
             "type": "boolean",
             "default": false,
-            "description": "%hexeditor.showOpenFileButton%"
+            "description": "%hexformateditor.showOpenFileButton%"
           }
         }
       }
@@ -111,7 +111,7 @@
       "hexExplorer": [
         {
           "type": "webview",
-          "id": "hexEditor.dataInspectorView",
+          "id": "hexForamtEditor.dataInspectorView",
           "name": "%dataInspectorView%",
           "when": "hexEditor:showSidebarInspector"
         }
@@ -120,7 +120,7 @@
     "menus": {
       "editor/title": [
         {
-          "when": "activeEditor && config.hexeditor.showOpenFileButton",
+          "when": "activeEditor && config.hexformateditor.showOpenFileButton",
           "command": "formatEditor.openFile",
           "group": "navigation@1"
         }
