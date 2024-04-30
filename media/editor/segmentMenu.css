@@ -1,0 +1,42 @@
+.segment-menu-container {
+  width: 250px;
+  height: 100vh; /* 修改为100vh */
+  background-color: #333;
+  color: #fff;
+  font-family: Arial, sans-serif;
+  padding: 5px; /* 调整padding为20px */
+}
+
+.segment {
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  border-radius: 5px;
+  margin-bottom: 10px;
+  padding: 5px;
+  background-color: #444;
+}
+
+.segment:hover {
+  background-color: #555;
+}
+
+.segment.selected {
+  background-color: #666;
+}
+
+.segment-name {
+  font-weight: bold;
+  margin-bottom: 5px;
+  font-size: 16px;
+}
+
+.buttons {
+  display: flex;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+.buttons button {
+  padding: 5px 10px;
+  cursor: pointer;
+}

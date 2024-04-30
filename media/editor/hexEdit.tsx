@@ -1,6 +1,3 @@
-// Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
-
 import React, { Suspense, useLayoutEffect, useMemo } from "react";
 import { render } from "react-dom";
 import { RecoilRoot, useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
@@ -13,6 +10,7 @@ import _style from "./hexEdit.css";
 import { useTheme } from "./hooks";
 import { ReadonlyWarning } from "./readonlyWarning";
 import { ScrollContainer } from "./scrollContainer";
+import { SegmentMenu } from "./segmentMenu";
 import { SettingsGear } from "./settings";
 import * as select from "./state";
 import { strings } from "./strings";
@@ -22,9 +20,12 @@ import { VsProgressIndicator } from "./vscodeUi";
 const style = throwOnUndefinedAccessInDev(_style);
 
 const Root: React.FC = () => {
+  // 获取和设置窗口尺寸信息的状态钩子
   const setDimensions = useSetRecoilState(select.dimensions);
+  // 获取主题样式的自定义钩子
   const theme = useTheme();
 
+  // 当组件挂载或窗口尺寸改变时更新尺寸信息
   useLayoutEffect(() => {
     const applyDimensions = () =>
       setDimensions({
@@ -40,11 +41,9 @@ const Root: React.FC = () => {
 
   return (
     <Suspense fallback={<VsProgressIndicator />}>
+      {/* 主页面布局 */}
       <h1 style={{ textAlign: "center" }}>HEX-Format-Editor</h1>
-      {/* 包裹菜单栏和编辑器组件 */}
       <div style={{ display: "flex", height: "100%" }}>
-        {/* 左侧菜单栏 */}
-        <Menu />
         {/* 右侧编辑器 */}
         <Editor />
       </div>
@@ -52,29 +51,24 @@ const Root: React.FC = () => {
   );
 };
 
-const Menu: React.FC = () => {
-  return (
-    <div style={{ width: "200px", backgroundColor: "#f0f0f0", padding: "20px" }}>
-      {/* 这里放置菜单项 */}
-      <ul>
-        <li>菜单项1</li>
-        <li>菜单项2</li>
-        <li>菜单项3</li>
-      </ul>
-    </div>
-  );
-};
-
 const Editor: React.FC = () => {
+  // 获取窗口尺寸信息的状态值
   const dimensions = useRecoilValue(select.dimensions);
+  // 设置编辑状态的状态钩子
   const setEdit = useSetRecoilState(select.edits);
+  // 获取只读状态的状态值
   const isReadonly = useRecoilValue(select.isReadonly);
+  // 获取数据检查器位置的状态值
   const inspectorLocation = useRecoilValue(select.dataInspectorLocation);
+  // 使用 useMemo 创建 DisplayContext 实例
   const ctx = useMemo(() => new DisplayContext(setEdit, isReadonly), []);
 
+  // 获取是否是大文件的状态值
   const isLargeFile = useRecoilValue(select.isLargeFile);
+  // 获取是否绕过大文件提示的状态值和设置该状态的状态钩子
   const [bypassLargeFilePrompt, setBypassLargeFile] = useRecoilState(select.bypassLargeFilePrompt);
 
+  // 如果是大文件且未绕过大文件提示，则渲染提示信息
   if (isLargeFile && !bypassLargeFilePrompt) {
     return (
       <div>
@@ -89,22 +83,32 @@ const Editor: React.FC = () => {
   }
 
   return (
+    // 提供数据显示上下文的 Provider
     <DataDisplayContext.Provider value={ctx}>
+      {/* 左侧菜单栏 */}
+      <SegmentMenu />
       <div
         className={style.container}
         style={{ "--cell-size": `${dimensions.rowPxHeight}px` } as React.CSSProperties}
       >
+        {/* 数据查找组件 */}
         <FindWidget />
+        {/* 设置按钮 */}
         <SettingsGear />
+        {/* 数据头部信息 */}
         <DataHeader />
+        {/* 数据滚动容器 */}
         <ScrollContainer />
+        {/* 只读警告 */}
         <ReadonlyWarning />
+        {/* 数据检查器悬停信息 */}
         {inspectorLocation === InspectorLocation.Hover && <DataInspectorHover />}
       </div>
     </DataDisplayContext.Provider>
   );
 };
 
+// 渲染根组件，并放入 RecoilRoot 提供状态管理功能
 render(
   <RecoilRoot>
     <Root />
