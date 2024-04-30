@@ -1,10 +1,11 @@
 .segment-menu-container {
   width: 250px;
-  height: 100vh; /* 修改为100vh */
+  height: 680px;
   background-color: #333;
   color: #fff;
   font-family: Arial, sans-serif;
-  padding: 5px; /* 调整padding为20px */
+  padding: 20px; /* 调整padding为20px */
+  overflow-y: auto; /* 添加垂直滚动条 */
 }
 
 .segment {
@@ -39,4 +40,37 @@
 .buttons button {
   padding: 5px 10px;
   cursor: pointer;
+}
+
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: #f9f9f9;
+  min-width: 90px;
+  box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
+  z-index: 1;
+}
+
+.dropdown-content button {
+  color: black;
+  padding: 2px 6px;
+  text-decoration: none;
+  display: block;
+}
+
+.dropdown-content button:hover {
+  background-color: #f1f1f1;
+}
+
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+
+.dropdown:hover .dropbtn {
+  background-color: #3e8e41;
 }
