@@ -34,11 +34,13 @@ class Segment {
   }
 }
 
-const SegmentItem: React.FC<{ segment: Segment; selected: boolean; onClick: () => void }> = ({
-  segment,
-  selected,
-  onClick,
-}) => {
+const SegmentItem: React.FC<{
+  segment: Segment;
+  selected: boolean;
+  onClick: () => void;
+  mergeSegmentsUp: () => void;
+  mergeSegmentsDown: () => void;
+}> = ({ segment, selected, onClick, mergeSegmentsUp, mergeSegmentsDown }) => {
   const [mergeDropdownVisible, setMergeDropdownVisible] = useState(false);
 
   const handleEdit = (e: React.MouseEvent) => {
@@ -50,10 +52,14 @@ const SegmentItem: React.FC<{ segment: Segment; selected: boolean; onClick: () =
     setMergeDropdownVisible(!mergeDropdownVisible);
   };
 
+  // 合并分段按钮点击事件
   const handleMerge = (direction: "up" | "down", e: React.MouseEvent) => {
     e.stopPropagation();
-    console.log(`向${direction === "up" ? "上" : "下"}合并分段: ${segment.name}`);
-    setMergeDropdownVisible(false);
+    if (direction === "up") {
+      mergeSegmentsUp();
+    } else {
+      mergeSegmentsDown();
+    }
   };
 
   return (
@@ -221,6 +227,42 @@ export const SegmentMenu: React.FC = () => {
     setMenuItems(newItems);
   };
 
+  // 向上合并分段
+  const mergeSegmentsUp = (segmentIndex: number) => {
+    if (segmentIndex > 0) {
+      const currentSegment = menuItems[segmentIndex];
+      const previousSegment = menuItems[segmentIndex - 1];
+      const mergedSegment = new Segment(
+        previousSegment.name,
+        previousSegment.start,
+        currentSegment.end,
+      );
+      const updatedMenuItems = [
+        ...menuItems.slice(0, segmentIndex - 1),
+        mergedSegment,
+        ...menuItems.slice(segmentIndex + 1),
+      ];
+      setMenuItems(updatedMenuItems);
+      setSelectedSegmentIndex(segmentIndex - 1);
+    }
+  };
+
+  // 向下合并分段
+  const mergeSegmentsDown = (segmentIndex: number) => {
+    if (segmentIndex < menuItems.length - 1) {
+      const currentSegment = menuItems[segmentIndex];
+      const nextSegment = menuItems[segmentIndex + 1];
+      const mergedSegment = new Segment(nextSegment.name, currentSegment.start, nextSegment.end);
+      const updatedMenuItems = [
+        ...menuItems.slice(0, segmentIndex),
+        mergedSegment,
+        ...menuItems.slice(segmentIndex + 2),
+      ];
+      setMenuItems(updatedMenuItems);
+      setSelectedSegmentIndex(segmentIndex);
+    }
+  };
+
   return (
     <div className={style.segmentMenuContainer}>
       <button onClick={separateSelectedContent}>分隔选中内容</button>
@@ -232,6 +274,8 @@ export const SegmentMenu: React.FC = () => {
           onClick={() => {
             handleMenuItemClick(item, index);
           }}
+          mergeSegmentsUp={() => mergeSegmentsUp(index)}
+          mergeSegmentsDown={() => mergeSegmentsDown(index)}
         />
       ))}
       {selectedSegmentIndex !== null && (
