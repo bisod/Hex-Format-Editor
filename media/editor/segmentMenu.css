@@ -31,13 +31,7 @@
   font-size: 16px;
 }
 
-.buttons {
-  display: flex;
-  gap: 5px;
-  margin-top: 5px;
-}
-
-.buttons button {
+.button {
   padding: 5px 10px;
   cursor: pointer;
 }

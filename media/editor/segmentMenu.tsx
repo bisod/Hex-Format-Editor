@@ -109,24 +109,32 @@ export const SegmentMenu: React.FC = () => {
   // 分割选中的内容
   const separateSelectedContent = () => {
     // 获取第一个选中范围
-    const originalRange = ctx.getSelectionRanges()[0];
-    const selectedRange: Range = new Range(originalRange.start, originalRange.end - 1);
-    console.log(selectedRange ? [selectedRange.start, selectedRange.end] : [null, null]);
+    const selectionRanges: Range[] = ctx.getSelectionRanges();
+    if (selectionRanges.length > 0) {
+      const originalRange: Range = selectionRanges[0];
+      // const originalRange = ctx.getSelectionRanges()[0];
+      const selectedRange: Range = new Range(originalRange.start, originalRange.end - 1);
+      console.log(selectedRange ? [selectedRange.start, selectedRange.end] : [null, null]);
 
-    // 如果存在选中范围
-    if (selectedRange) {
-      // 查找当前选中内容在哪个现有分段中
-      const segmentIndices = findSegmentIndices(selectedRange.start, selectedRange.end, menuItems);
+      // 如果存在选中范围
+      if (selectedRange) {
+        // 查找当前选中内容在哪个现有分段中
+        const segmentIndices = findSegmentIndices(
+          selectedRange.start,
+          selectedRange.end,
+          menuItems,
+        );
 
-      // 如果选中内容在一个现有分段中
-      if (segmentIndices.length === 1) {
-        // 处理选中内容在单个分段中的情况
-        handleSingleSegment(selectedRange, segmentIndices[0]);
-      }
-      // 如果选中内容不在任何现有分段中
-      else {
-        // 处理选中内容跨越多个分段的情况
-        handleMultipleSegments();
+        // 如果选中内容在一个现有分段中
+        if (segmentIndices.length === 1) {
+          // 处理选中内容在单个分段中的情况
+          handleSingleSegment(selectedRange, segmentIndices[0]);
+        }
+        // 如果选中内容不在任何现有分段中
+        else {
+          // 处理选中内容跨越多个分段的情况
+          handleMultipleSegments();
+        }
       }
     }
   };

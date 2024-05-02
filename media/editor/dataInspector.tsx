@@ -1,6 +1,7 @@
 import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { useRecoilValue } from "recoil";
 import { Endianness } from "../../shared/protocol";
+import { Range } from "../../shared/util/range";
 import { FocusedElement, getDataCellElement, useDisplayContext } from "./dataDisplayContext";
 import _style from "./dataInspector.css";
 import { inspectableTypes } from "./dataInspectorProperties";
@@ -17,6 +18,7 @@ export const DataInspectorHover: React.FC = () => {
   const ctx = useDisplayContext(); // 使用数据管理上下文
   const [inspected, setInspected] = useState<FocusedElement>(); // 当前被检查的字节
   const anchor = useMemo(() => inspected && getDataCellElement(inspected), [inspected]); // 锚点元素，用于定位数据检查器的位置
+  const [lookahead, setLookahead] = useState<number>(0); // 选中内容的 lookahead
 
   useEffect(() => {
     let hoverTimeout: NodeJS.Timeout | undefined;
@@ -37,7 +39,29 @@ export const DataInspectorHover: React.FC = () => {
     return () => disposable.dispose(); // 取消注册事件处理函数
   }, []);
 
-  // 如果没有被检查的字节或者没有锚点元素，则返回空
+  useEffect(() => {
+    const updateLookahead = () => {
+      const selectionRanges: Range[] = ctx.getSelectionRanges();
+      if (selectionRanges.length > 0) {
+        const originalRange: Range = selectionRanges[0];
+        console.log("Original Range:", originalRange);
+        const length = originalRange.end - originalRange.start;
+        console.log("Length:", length);
+        setLookahead(length);
+      } else {
+        setLookahead(0); // 如果没有选择范围，将 lookahead 设置为 0
+      }
+    };
+
+    updateLookahead(); // 初始化
+
+    const disposable = ctx.onDidSelection(() => {
+      updateLookahead(); // 选择发生变化时更新 lookahead
+    });
+
+    return () => disposable.dispose();
+  }, []);
+
   if (!inspected || !anchor) {
     return null;
   }
@@ -46,7 +70,7 @@ export const DataInspectorHover: React.FC = () => {
     <VsTooltipPopover anchor={anchor} hide={() => setInspected(undefined)} visible={true}>
       <Suspense fallback={strings.loadingDotDotDot}>
         {/* 渲染数据检查器 */}
-        <InspectorContents columns={4} offset={inspected.byte} />
+        <InspectorContents columns={4} offset={inspected.byte} lookahead={lookahead} />
       </Suspense>
     </VsTooltipPopover>
   );
@@ -58,7 +82,8 @@ export const DataInspectorAside: React.FC<{ onInspecting?(isInspecting: boolean)
 }) => {
   const ctx = useDisplayContext(); // 使用数据管理上下文
   const [inspected, setInspected] = useState<FocusedElement | undefined>(ctx.focusedElement); // 当前被检查的字节
-
+  const [lookahead, setLookahead] = useState<number>(0); // 选中内容的 lookahead
+  // let lookahead = 0;
   useEffect(() => {
     // 注册焦点事件的处理函数
     const disposable = ctx.onDidFocus(focused => {
@@ -72,6 +97,29 @@ export const DataInspectorAside: React.FC<{ onInspecting?(isInspecting: boolean)
     return () => disposable.dispose(); // 取消注册事件处理函数
   }, []);
 
+  useEffect(() => {
+    const updateLookahead = () => {
+      const selectionRanges: Range[] = ctx.getSelectionRanges();
+      if (selectionRanges.length > 0) {
+        const originalRange: Range = selectionRanges[0];
+        console.log("Original Range:", originalRange);
+        const length = originalRange.end - originalRange.start;
+        console.log("Length:", length);
+        setLookahead(length);
+      } else {
+        setLookahead(0); // 如果没有选择范围，将 lookahead 设置为 0
+      }
+    };
+
+    updateLookahead(); // 初始化
+
+    const disposable = ctx.onDidSelection(() => {
+      updateLookahead(); // 选择发生变化时更新 lookahead
+    });
+
+    return () => disposable.dispose();
+  }, []);
+
   // 如果没有被检查的字节，则返回空
   if (!inspected) {
     return null;
@@ -80,19 +128,20 @@ export const DataInspectorAside: React.FC<{ onInspecting?(isInspecting: boolean)
   return (
     <Suspense fallback={null}>
       {/* 渲染数据检查器 */}
-      <InspectorContents columns={2} offset={inspected.byte} />
+      <InspectorContents columns={2} offset={inspected.byte} lookahead={lookahead} />
     </Suspense>
   );
 };
 
 // 向前查看的字节数
-const lookahead = 8;
+// const lookahead = 8;
 
 /** 数据检查器的内部内容，被悬停和右侧检查器共用 */
 const InspectorContents: React.FC<{
   offset: number; // 字节的偏移量
   columns: number; // 列数
-}> = ({ offset, columns }) => {
+  lookahead: number;
+}> = ({ offset, columns, lookahead }) => {
   // 获取默认字节序的状态值
   const defaultEndianness = useRecoilValue(select.editorSettings).defaultEndianness;
   // 获取和设置字节序的状态钩子

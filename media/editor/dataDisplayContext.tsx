@@ -70,6 +70,10 @@ export class DisplayContext {
   public readonly onDidHover = this.hoverChangeEmitter.addListener;
 
   /**
+   * Handler for when any selection changes.
+   */
+  public readonly onDidSelection = this.selectionChangeEmitter.addListener;
+  /**
    * Emitter that fires when a selection for a single byte changes.
    */
   public onDidChangeSelection(
