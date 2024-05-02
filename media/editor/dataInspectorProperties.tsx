@@ -244,7 +244,6 @@ const addTextDecoder = (encoding: string, minBytes: number) => {
     minBytes,
     convert: dv => {
       const utf8 = new TextDecoder(encoding).decode(dv.buffer);
-      for (const char of utf8) return char;
       return utf8;
     },
   });
