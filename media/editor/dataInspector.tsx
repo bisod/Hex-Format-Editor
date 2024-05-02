@@ -19,6 +19,7 @@ export const DataInspectorHover: React.FC = () => {
   const [inspected, setInspected] = useState<FocusedElement>(); // 当前被检查的字节
   const anchor = useMemo(() => inspected && getDataCellElement(inspected), [inspected]); // 锚点元素，用于定位数据检查器的位置
   const [lookahead, setLookahead] = useState<number>(0); // 选中内容的 lookahead
+  const [started, setStarted] = useState<number | undefined>(); // 当前被检查的字节
 
   useEffect(() => {
     let hoverTimeout: NodeJS.Timeout | undefined;
@@ -48,21 +49,23 @@ export const DataInspectorHover: React.FC = () => {
         const length = originalRange.end - originalRange.start;
         console.log("Length:", length);
         setLookahead(length);
+        setStarted(originalRange.start); // 将 first 设置为第一个 Range 的 start 属性
       } else {
         setLookahead(0); // 如果没有选择范围，将 lookahead 设置为 0
+        setStarted(undefined); // 如果没有选择范围，将 first 设置为 undefined
       }
     };
 
     updateLookahead(); // 初始化
 
     const disposable = ctx.onDidSelection(() => {
-      updateLookahead(); // 选择发生变化时更新 lookahead
+      updateLookahead(); // 选择发生变化时更新 lookahead 和 started
     });
 
     return () => disposable.dispose();
   }, []);
 
-  if (!inspected || !anchor) {
+  if (!inspected || !anchor || started === undefined) {
     return null;
   }
 
@@ -70,7 +73,7 @@ export const DataInspectorHover: React.FC = () => {
     <VsTooltipPopover anchor={anchor} hide={() => setInspected(undefined)} visible={true}>
       <Suspense fallback={strings.loadingDotDotDot}>
         {/* 渲染数据检查器 */}
-        <InspectorContents columns={4} offset={inspected.byte} lookahead={lookahead} />
+        <InspectorContents columns={4} offset={started} lookahead={lookahead} />
       </Suspense>
     </VsTooltipPopover>
   );
@@ -83,7 +86,8 @@ export const DataInspectorAside: React.FC<{ onInspecting?(isInspecting: boolean)
   const ctx = useDisplayContext(); // 使用数据管理上下文
   const [inspected, setInspected] = useState<FocusedElement | undefined>(ctx.focusedElement); // 当前被检查的字节
   const [lookahead, setLookahead] = useState<number>(0); // 选中内容的 lookahead
-  // let lookahead = 0;
+  const [started, setStarted] = useState<number | undefined>(); // 当前被检查的字节
+
   useEffect(() => {
     // 注册焦点事件的处理函数
     const disposable = ctx.onDidFocus(focused => {
@@ -106,29 +110,31 @@ export const DataInspectorAside: React.FC<{ onInspecting?(isInspecting: boolean)
         const length = originalRange.end - originalRange.start;
         console.log("Length:", length);
         setLookahead(length);
+        setStarted(originalRange.start); // 将 inspected 设置为第一个 Range 的 start 属性
       } else {
         setLookahead(0); // 如果没有选择范围，将 lookahead 设置为 0
+        setStarted(undefined); // 如果没有选择范围，将 inspected 设置为 undefined
       }
     };
 
     updateLookahead(); // 初始化
 
     const disposable = ctx.onDidSelection(() => {
-      updateLookahead(); // 选择发生变化时更新 lookahead
+      updateLookahead(); // 选择发生变化时更新 lookahead 和 inspected
     });
 
     return () => disposable.dispose();
   }, []);
 
   // 如果没有被检查的字节，则返回空
-  if (!inspected) {
+  if (!inspected || started === undefined) {
     return null;
   }
 
   return (
     <Suspense fallback={null}>
       {/* 渲染数据检查器 */}
-      <InspectorContents columns={2} offset={inspected.byte} lookahead={lookahead} />
+      <InspectorContents columns={2} offset={started} lookahead={lookahead} />
     </Suspense>
   );
 };

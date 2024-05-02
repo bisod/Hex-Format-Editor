@@ -115,28 +115,28 @@ const inspectTypesBuilder: IInspectableType[] = [
     minBytes: 2,
     convert: (dv, le) => convertByChunk(dv, 2, dataView => dataView.getInt16(0, le).toString()),
   },
-  {
-    label: "uint24",
-    minBytes: 3,
-    convert: (dv, le) =>
-      convertByChunk(dv, 3, dataView => getUint24(dataView.buffer, le).toString()),
-  },
+  // {
+  //   label: "uint24",
+  //   minBytes: 3,
+  //   convert: (dv, le) =>
+  //     convertByChunk(dv, 3, dataView => getUint24(dataView.buffer, le).toString()),
+  // },
 
   // { label: "uint16", minBytes: 2, convert: (dv, le) => dv.getUint16(0, le).toString() },
   // { label: "int16", minBytes: 2, convert: (dv, le) => dv.getInt16(0, le).toString() },
 
   // { label: "uint24", minBytes: 3, convert: (dv, le) => getUint24(dv.buffer, le).toString() },
 
-  {
-    label: "int24",
-    minBytes: 3,
-    convert: (dv, le) =>
-      convertByChunk(dv, 3, dataView => {
-        const uint = getUint24(dataView.buffer, le);
-        const isNegative = !!(uint & 0x800000);
-        return String(isNegative ? -(0xffffff - uint + 1) : uint);
-      }),
-  },
+  // {
+  //   label: "int24",
+  //   minBytes: 3,
+  //   convert: (dv, le) =>
+  //     convertByChunk(dv, 3, dataView => {
+  //       const uint = getUint24(dataView.buffer, le);
+  //       const isNegative = !!(uint & 0x800000);
+  //       return String(isNegative ? -(0xffffff - uint + 1) : uint);
+  //     }),
+  // },
   // {
   //   label: "int24",
   //   minBytes: 3,
@@ -170,31 +170,31 @@ const inspectTypesBuilder: IInspectableType[] = [
     convert: (dv, le) => convertByChunk(dv, 8, dataView => dataView.getBigInt64(0, le).toString()),
   },
 
-  {
-    label: "ULEB128",
-    minBytes: 1,
-    convert: dv => convertByChunk(dv, 1, dataView => getULEB128(dataView.buffer).toString()),
-  },
+  // {
+  //   label: "ULEB128",
+  //   minBytes: 1,
+  //   convert: dv => convertByChunk(dv, 1, dataView => getULEB128(dataView.buffer).toString()),
+  // },
 
-  {
-    label: "SLEB128",
-    minBytes: 1,
-    convert: dv => convertByChunk(dv, 1, dataView => getSLEB128(dataView.buffer).toString()),
-  },
+  // {
+  //   label: "SLEB128",
+  //   minBytes: 1,
+  //   convert: dv => convertByChunk(dv, 1, dataView => getSLEB128(dataView.buffer).toString()),
+  // },
 
-  {
-    label: "float16",
-    minBytes: 2,
-    convert: (dv, le) =>
-      convertByChunk(dv, 2, dataView => getFloat16(5, 10)(dataView.buffer, le).toString()),
-  },
+  // {
+  //   label: "float16",
+  //   minBytes: 2,
+  //   convert: (dv, le) =>
+  //     convertByChunk(dv, 2, dataView => getFloat16(5, 10)(dataView.buffer, le).toString()),
+  // },
 
-  {
-    label: "bfloat16",
-    minBytes: 2,
-    convert: (dv, le) =>
-      convertByChunk(dv, 2, dataView => getFloat16(8, 7)(dataView.buffer, le).toString()),
-  },
+  // {
+  //   label: "bfloat16",
+  //   minBytes: 2,
+  //   convert: (dv, le) =>
+  //     convertByChunk(dv, 2, dataView => getFloat16(8, 7)(dataView.buffer, le).toString()),
+  // },
 
   {
     label: "float32",

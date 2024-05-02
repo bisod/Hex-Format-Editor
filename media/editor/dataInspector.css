@@ -1,26 +1,28 @@
 .types {
-	display: grid;
-	gap: 0.3rem 1rem;
-	align-items: center;
-	margin: 0;
-	max-width: calc(100vw - 30px);
+  display: grid;
+  gap: 0.3rem 1rem;
+  align-items: center;
+  margin: 0;
+  max-width: calc(100vw - 30px);
 }
 
 .types dd {
-
-	font-family: var(--vscode-editor-font-family);
-	user-select: auto;
+  font-family: var(--vscode-editor-font-family);
+  user-select: auto;
+  max-width: 300px; /* 设置最大宽度 */
+  overflow-x: auto; /* 或者设置为 scroll */
 }
 
-.types dd, .types dl {
-	margin: 0;
+.types dd,
+.types dl {
+  margin: 0;
 }
 
 .endianness-toggle-container {
-	display: flex;
-	align-items: center;
+  display: flex;
+  align-items: center;
 }
 
 .endianness-toggle-container input {
-	margin: 0 0.3rem 0 0;
+  margin: 0 0.3rem 0 0;
 }
