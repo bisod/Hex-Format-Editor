@@ -45,9 +45,7 @@ export const DataInspectorHover: React.FC = () => {
       const selectionRanges: Range[] = ctx.getSelectionRanges();
       if (selectionRanges.length > 0) {
         const originalRange: Range = selectionRanges[0];
-        console.log("Original Range:", originalRange);
         const length = originalRange.end - originalRange.start;
-        console.log("Length:", length);
         setLookahead(length);
         setStarted(originalRange.start); // 将 first 设置为第一个 Range 的 start 属性
       } else {
@@ -106,9 +104,7 @@ export const DataInspectorAside: React.FC<{ onInspecting?(isInspecting: boolean)
       const selectionRanges: Range[] = ctx.getSelectionRanges();
       if (selectionRanges.length > 0) {
         const originalRange: Range = selectionRanges[0];
-        console.log("Original Range:", originalRange);
         const length = originalRange.end - originalRange.start;
-        console.log("Length:", length);
         setLookahead(length);
         setStarted(originalRange.start); // 将 inspected 设置为第一个 Range 的 start 属性
       } else {

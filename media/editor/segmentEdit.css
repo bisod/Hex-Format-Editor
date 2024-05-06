@@ -1,0 +1,10 @@
+.segment-edit {
+  position: absolute;
+  top: var(--cell-size); /* 与 DataHeader 的底部对齐 */
+  left: calc(var(--cell-size) / 4); /* 与 DataHeader 的左侧对齐 */
+  right: var(--scrollbar-width); /* 与 ScrollContainer 的右侧对齐 */
+  bottom: 0; /* 拉伸至底部，与 ScrollContainer 对齐 */
+
+  /* 其他样式属性，如大小、颜色等 */
+  background-color: white; /* 设置背景颜色 */
+}

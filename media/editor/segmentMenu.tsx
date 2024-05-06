@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useRecoilValue } from "recoil";
+import { MessageType } from "../../shared/protocol";
 import { Range } from "../../shared/util/range";
 import { useDisplayContext } from "./dataDisplayContext";
 import _style from "./segmentMenu.css";
@@ -8,7 +9,7 @@ import { throwOnUndefinedAccessInDev } from "./util";
 
 const style = throwOnUndefinedAccessInDev(_style);
 
-class Segment {
+export class Segment {
   name: string;
   start: number;
   end: number;
@@ -40,11 +41,14 @@ const SegmentItem: React.FC<{
   onClick: () => void;
   mergeSegmentsUp: () => void;
   mergeSegmentsDown: () => void;
-}> = ({ segment, selected, onClick, mergeSegmentsUp, mergeSegmentsDown }) => {
+  onEditSegment: (segment: Segment) => void;
+}> = ({ segment, selected, onClick, mergeSegmentsUp, mergeSegmentsDown, onEditSegment }) => {
   const [mergeDropdownVisible, setMergeDropdownVisible] = useState(false);
 
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
+    // 调用父组件传递过来的设置编辑状态的函数
+    onEditSegment(segment);
     console.log(`编辑分段: ${segment.name}`);
   };
 
@@ -90,7 +94,11 @@ const SegmentItem: React.FC<{
   );
 };
 
-export const SegmentMenu: React.FC = () => {
+interface SegmentMenuProps {
+  setEditSegment: (segment: Segment | null) => void; // 定义 props
+}
+
+export const SegmentMenu: React.FC<SegmentMenuProps> = ({ setEditSegment }) => {
   const ctx = useDisplayContext();
   const fileSize = useRecoilValue(select.fileSize) ?? 0; // 如果为undefined，则默认为0
   const [menuItems, setMenuItems] = useState([new Segment("全文", 0, fileSize - 1)]); // 第一个分段为全文
@@ -98,12 +106,18 @@ export const SegmentMenu: React.FC = () => {
   const [nameIndex, setNameIndex] = useState(1);
 
   const handleMenuItemClick = (segment: Segment, index: number) => {
+    const { start, end } = segment;
+    ctx.setSelectionRanges([Range.inclusive(start, end)]); // 更新选中的内容
     setSelectedSegmentIndex(index);
-    console.log(segment);
   };
 
   const closeSelectedSegmentWindow = () => {
     setSelectedSegmentIndex(null);
+  };
+
+  // 定义一个函数来设置编辑状态
+  const handleEditSegment = (segment: Segment) => {
+    setEditSegment(segment);
   };
 
   // 分割选中的内容
@@ -114,7 +128,6 @@ export const SegmentMenu: React.FC = () => {
       const originalRange: Range = selectionRanges[0];
       // const originalRange = ctx.getSelectionRanges()[0];
       const selectedRange: Range = new Range(originalRange.start, originalRange.end - 1);
-      console.log(selectedRange ? [selectedRange.start, selectedRange.end] : [null, null]);
 
       // 如果存在选中范围
       if (selectedRange) {
@@ -157,6 +170,11 @@ export const SegmentMenu: React.FC = () => {
     // 如果选中内容与分段完全重合，无需拆分
     if (selectedRange.start === segment.start && selectedRange.end === segment.end) {
       console.error("选中内容与分段完全重合，无需拆分");
+      // vscode.window.showInformationMessage('Hello World!');
+      select.messageHandler.sendEvent({
+        type: MessageType.ShowWarningMessage,
+        warnning: "选中内容与分段完全重合，无需拆分",
+      });
     }
     // 如果选中内容的开始与分段的开始相同
     else if (selectedRange.start === segment.start) {
@@ -177,6 +195,10 @@ export const SegmentMenu: React.FC = () => {
   // 处理选中内容跨越多个分段的情况
   const handleMultipleSegments = () => {
     console.error("选中内容跨越多个分段，无法处理");
+    select.messageHandler.sendEvent({
+      type: MessageType.ShowWarningMessage,
+      warnning: "选中内容跨越多个分段，无法处理",
+    });
   };
 
   // 在选中内容的开始处拆分分段
@@ -284,6 +306,7 @@ export const SegmentMenu: React.FC = () => {
           }}
           mergeSegmentsUp={() => mergeSegmentsUp(index)}
           mergeSegmentsDown={() => mergeSegmentsDown(index)}
+          onEditSegment={handleEditSegment}
         />
       ))}
       {selectedSegmentIndex !== null && (

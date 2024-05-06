@@ -1,4 +1,4 @@
-import React, { Suspense, useLayoutEffect, useMemo } from "react";
+import React, { Suspense, useLayoutEffect, useMemo, useState } from "react";
 import { render } from "react-dom";
 import { RecoilRoot, useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
 import { InspectorLocation } from "../../shared/protocol";
@@ -10,7 +10,8 @@ import _style from "./hexEdit.css";
 import { useTheme } from "./hooks";
 import { ReadonlyWarning } from "./readonlyWarning";
 import { ScrollContainer } from "./scrollContainer";
-import { SegmentMenu } from "./segmentMenu";
+import { SegmentEdit } from "./segmentEdit";
+import { Segment, SegmentMenu } from "./segmentMenu";
 import { SettingsGear } from "./settings";
 import * as select from "./state";
 import { strings } from "./strings";
@@ -68,6 +69,8 @@ const Editor: React.FC = () => {
   // 获取是否绕过大文件提示的状态值和设置该状态的状态钩子
   const [bypassLargeFilePrompt, setBypassLargeFile] = useRecoilState(select.bypassLargeFilePrompt);
 
+  const [editSegment, setEditSegment] = useState<Segment | null>(null); // 控制是否显示编辑组件
+
   // 如果是大文件且未绕过大文件提示，则渲染提示信息
   if (isLargeFile && !bypassLargeFilePrompt) {
     return (
@@ -86,7 +89,7 @@ const Editor: React.FC = () => {
     // 提供数据显示上下文的 Provider
     <DataDisplayContext.Provider value={ctx}>
       {/* 左侧菜单栏 */}
-      <SegmentMenu />
+      <SegmentMenu setEditSegment={setEditSegment} />
       <div
         className={style.container}
         style={{ "--cell-size": `${dimensions.rowPxHeight}px` } as React.CSSProperties}
@@ -95,10 +98,17 @@ const Editor: React.FC = () => {
         <FindWidget />
         {/* 设置按钮 */}
         <SettingsGear />
-        {/* 数据头部信息 */}
-        <DataHeader />
-        {/* 数据滚动容器 */}
-        <ScrollContainer />
+        {editSegment ? null : (
+          <>
+            {/* 数据头部信息 */}
+            <DataHeader />
+            {/* 数据滚动容器 */}
+            <ScrollContainer />
+          </>
+        )}
+        {/* 如果 editSegment 存在，则渲染 SegmentEdit 组件 */}
+        {editSegment && <SegmentEdit segment={editSegment} onClose={() => setEditSegment(null)} />}
+        {editSegment && <DataInspectorHover />}
         {/* 只读警告 */}
         <ReadonlyWarning />
         {/* 数据检查器悬停信息 */}
