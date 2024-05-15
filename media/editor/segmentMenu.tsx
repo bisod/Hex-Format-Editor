@@ -87,6 +87,7 @@ export const SegmentItem: React.FC<{
   const [mergeDropdownVisible, setMergeDropdownVisible] = useState(false);
   const [isEditName, setIsEditName] = useState(false);
   const [newName, setNewName] = useState(segment.name);
+  const [isSubSegmentsExpanded, setIsSubSegmentsExpanded] = useState(true); // 控制子分段展开与折叠
 
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -136,6 +137,10 @@ export const SegmentItem: React.FC<{
     }
   };
 
+  const toggleSubSegments = () => {
+    setIsSubSegmentsExpanded(!isSubSegmentsExpanded);
+  };
+
   return (
     <div>
       <div
@@ -159,6 +164,11 @@ export const SegmentItem: React.FC<{
               <div className={style.dropdownContent}>
                 {0 && <button onClick={handleEdit}>编辑</button>}
                 {!isEditName && <button onClick={handleRename}>重命名</button>}
+                {segment.subSegments.length > 0 && (
+                  <button onClick={toggleSubSegments}>
+                    {isSubSegmentsExpanded ? "折叠子分段" : "展开子分段"}
+                  </button>
+                )}
                 {segment.subSegments.length && (
                   <button onClick={onClearSubSegments}>清空子分段</button>
                 )}
@@ -172,7 +182,7 @@ export const SegmentItem: React.FC<{
         </div>
       </div>
       {/* 递归渲染子分段 */}
-      {segment.subSegments.length > 0 && (
+      {isSubSegmentsExpanded && segment.subSegments.length > 0 && (
         <div className={style.subSegments}>
           {segment.subSegments.map((subSegment, index) => (
             <SegmentItem
@@ -231,29 +241,26 @@ export const SegmentMenu: React.FC<SegmentMenuProps> = ({ setEditSegment }) => {
       const selectedRange: Range = new Range(originalRange.start, originalRange.end - 1);
 
       // 如果存在选中范围
-      if (selectedRange) {
-        // 查找当前选中内容在哪个现有分段中
-        const segmentIndices = findSegmentIndices(
-          selectedRange.start,
-          selectedRange.end,
-          menuItems,
-        );
-        console.log(segmentIndices);
 
-        // 如果选中内容在一个现有分段中
-        if (segmentIndices.length) {
-          // 处理选中内容在单个分段中的情况
-          // 处理选中内容在单个分段中的情况
-          const newMenuItems = handleSingleSegment(selectedRange, segmentIndices);
-          // 更新菜单项
-          updateMenuItems(newMenuItems);
-        }
-        // 如果选中内容不在任何现有分段中
-        else {
-          // 处理选中内容跨越多个分段的情况
-          showWarningMessage("选中内容跨越多个分段，无法处理");
-        }
+      // 查找当前选中内容在哪个现有分段中
+      const segmentIndices = findSegmentIndices(selectedRange.start, selectedRange.end, menuItems);
+      console.log(segmentIndices);
+
+      // 如果选中内容在一个现有分段中
+      if (segmentIndices.length) {
+        // 处理选中内容在单个分段中的情况
+        // 处理选中内容在单个分段中的情况
+        const newMenuItems = handleSingleSegment(selectedRange, segmentIndices);
+        // 更新菜单项
+        updateMenuItems(newMenuItems);
       }
+      // 如果选中内容不在任何现有分段中
+      else {
+        // 处理选中内容跨越多个分段的情况
+        showWarningMessage("选中内容跨越多个分段，无法处理");
+      }
+    } else {
+      showWarningMessage("无选中内容");
     }
   };
 
@@ -526,50 +533,49 @@ export const SegmentMenu: React.FC<SegmentMenuProps> = ({ setEditSegment }) => {
       const selectedRange: Range = new Range(originalRange.start, originalRange.end - 1);
 
       // 如果存在选中范围
-      if (selectedRange) {
-        // 查找当前选中内容在哪个现有分段中
-        const segmentIndices = findSegmentIndices(
-          selectedRange.start,
-          selectedRange.end,
-          menuItems,
-        );
 
-        // 如果选中内容在一个现有分段中
-        if (segmentIndices.length) {
-          // 获取当前分段
-          const parentSegment = getSegmentByIndices(segmentIndices, menuItems);
-          // 如果选中内容与当前分段完全重合，无需拆分
-          if (
-            selectedRange.start === parentSegment.start &&
-            selectedRange.end === parentSegment.end
-          ) {
-            console.error("选中内容与分段完全重合，无需拆分");
-            return menuItems; // 返回原始菜单项列表
-          }
+      // 查找当前选中内容在哪个现有分段中
+      const segmentIndices = findSegmentIndices(selectedRange.start, selectedRange.end, menuItems);
 
-          let newSubSegments: Segment[]; // 新的子分段列表
-
-          // 如果选中内容的开始与当前分段的开始相同
-          if (selectedRange.start === parentSegment.start) {
-            // 在选中内容的开始处拆分分段，并获取更新后的子分段列表
-            newSubSegments = splitSegmentAtStart(selectedRange, parentSegment, true);
-          }
-          // 如果选中内容的结束与当前分段的结束相同
-          else if (selectedRange.end === parentSegment.end) {
-            // 在选中内容的结束处拆分分段，并获取更新后的子分段列表
-            newSubSegments = splitSegmentAtEnd(selectedRange, parentSegment, true);
-          }
-          // 其他情况，在选中内容中间位置拆分分段，并获取更新后的子分段列表
-          else {
-            newSubSegments = splitSegmentInMiddle(selectedRange, parentSegment, true);
-          }
-          // 将新创建的子分段添加到父分段中
-          parentSegment.addSubSegments(newSubSegments);
-
-          // 更新菜单项
-          updateMenuItems([...menuItems]);
+      // 如果选中内容在一个现有分段中
+      if (segmentIndices.length) {
+        // 获取当前分段
+        const parentSegment = getSegmentByIndices(segmentIndices, menuItems);
+        // 如果选中内容与当前分段完全重合，无需拆分
+        if (
+          selectedRange.start === parentSegment.start &&
+          selectedRange.end === parentSegment.end
+        ) {
+          showWarningMessage("选中内容与分段完全重合，无需拆分");
+          return menuItems; // 返回原始菜单项列表
         }
+
+        let newSubSegments: Segment[]; // 新的子分段列表
+
+        // 如果选中内容的开始与当前分段的开始相同
+        if (selectedRange.start === parentSegment.start) {
+          // 在选中内容的开始处拆分分段，并获取更新后的子分段列表
+          newSubSegments = splitSegmentAtStart(selectedRange, parentSegment, true);
+        }
+        // 如果选中内容的结束与当前分段的结束相同
+        else if (selectedRange.end === parentSegment.end) {
+          // 在选中内容的结束处拆分分段，并获取更新后的子分段列表
+          newSubSegments = splitSegmentAtEnd(selectedRange, parentSegment, true);
+        }
+        // 其他情况，在选中内容中间位置拆分分段，并获取更新后的子分段列表
+        else {
+          newSubSegments = splitSegmentInMiddle(selectedRange, parentSegment, true);
+        }
+        // 将新创建的子分段添加到父分段中
+        parentSegment.addSubSegments(newSubSegments);
+
+        // 更新菜单项
+        updateMenuItems([...menuItems]);
+      } else {
+        showWarningMessage("选中内容跨越多个分段，无法处理");
       }
+    } else {
+      showWarningMessage("无选中内容");
     }
   };
 
