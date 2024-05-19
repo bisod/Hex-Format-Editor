@@ -1,7 +1,7 @@
 import ListSelection from "@vscode/codicons/src/icons/list-selection.svg";
 import TriangleDown from "@vscode/codicons/src/icons/triangle-down.svg";
 import TriangleRight from "@vscode/codicons/src/icons/triangle-right.svg";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRecoilValue } from "recoil";
 import { MessageType } from "../../shared/protocol";
 import { Range } from "../../shared/util/range";
@@ -171,8 +171,23 @@ export const SegmentItem: React.FC<{
     setNewName(e.target.value);
   };
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "F2") {
+        if (selectedIndices.join(",") === indices.join(",") && !isEditName) {
+          handleRename();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selectedIndices, indices, isEditName]);
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
+    if (isEditName && e.key === "Enter") {
       handleRename();
     }
   };
