@@ -14,7 +14,7 @@ import { SegmentMenu } from "./segmentMenu";
 import { SettingsGear } from "./settings";
 import * as select from "./state";
 import { strings } from "./strings";
-import { ToolTip, TooltipProps } from "./toolTip"; // 导入 Tooltip 组件
+import { ContextMenu, ContextMenuProps, ToolTip, TooltipProps } from "./toolTip"; // 导入 Tooltip 组件
 import { throwOnUndefinedAccessInDev } from "./util";
 import { VsProgressIndicator } from "./vscodeUi";
 
@@ -76,6 +76,13 @@ const Editor: React.FC = () => {
     position: { left: 0, top: 0 },
   });
 
+  const [contextMenuProps, setContextMenuProps] = useState<ContextMenuProps>({
+    isVisible: false,
+    items: [],
+    onClose: () => {},
+    position: { left: 0, top: 0 },
+  });
+
   const showToolTip = (showText: string, mouseX: number, mouseY: number) => {
     const mousePosition = { left: mouseX, top: mouseY };
     setTooltipProps({ isVisible: true, text: showText, position: mousePosition });
@@ -83,6 +90,32 @@ const Editor: React.FC = () => {
 
   const hideToolTip = () => {
     setTooltipProps({ isVisible: false, text: "", position: { left: 0, top: 0 } });
+  };
+
+  const openContextMenu = (
+    myitems: {
+      label: string;
+      onClick: () => void;
+    }[],
+    mouseX: number,
+    mouseY: number,
+  ) => {
+    const mousePosition = { left: mouseX, top: mouseY };
+    setContextMenuProps({
+      isVisible: true,
+      items: myitems,
+      onClose: closeContextMenu,
+      position: mousePosition,
+    });
+  };
+
+  const closeContextMenu = () => {
+    setContextMenuProps({
+      isVisible: false,
+      items: [],
+      onClose: () => {},
+      position: { left: 0, top: 0 },
+    });
   };
   // 如果是大文件且未绕过大文件提示，则渲染提示信息
   if (isLargeFile && !bypassLargeFilePrompt) {
@@ -106,9 +139,19 @@ const Editor: React.FC = () => {
         text={tooltipProps.text}
         position={tooltipProps.position}
       />
+      <ContextMenu
+        isVisible={contextMenuProps.isVisible}
+        items={contextMenuProps.items}
+        onClose={contextMenuProps.onClose}
+        position={contextMenuProps.position}
+      />
       {/* 左侧菜单栏 */}
       {/* <SegmentMenu setEditSegment={setEditSegment} /> */}
-      <SegmentMenu showToolTip={showToolTip} hideToolTip={hideToolTip} />
+      <SegmentMenu
+        showToolTip={showToolTip}
+        hideToolTip={hideToolTip}
+        openContextMenu={openContextMenu}
+      />
       <div
         className={style.container}
         style={{ "--cell-size": `${dimensions.rowPxHeight}px` } as React.CSSProperties}

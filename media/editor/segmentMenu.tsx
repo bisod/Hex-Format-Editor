@@ -76,6 +76,14 @@ export const SegmentItem: React.FC<{
   renameSegment: (indices: number[], newName: string) => void; // 重命名分段回调函数
   showToolTip: (showText: string, mouseX: number, mouseY: number) => void;
   hideToolTip: () => void;
+  openContextMenu: (
+    myitems: {
+      label: string;
+      onClick: () => void;
+    }[],
+    mouseX: number,
+    mouseY: number,
+  ) => void;
   // onEditSegment: (segment: Segment) => void;
 }> = ({
   segment,
@@ -89,9 +97,10 @@ export const SegmentItem: React.FC<{
   renameSegment,
   showToolTip,
   hideToolTip,
+  openContextMenu,
   // onEditSegment,
 }) => {
-  const [mergeDropdownVisible, setMergeDropdownVisible] = useState(false);
+  // const [mergeDropdownVisible, setMergeDropdownVisible] = useState(false);
   const [isEditName, setIsEditName] = useState(false);
   const [newName, setNewName] = useState(segment.name);
   const [isSubSegmentsExpanded, setIsSubSegmentsExpanded] = useState(true); // 控制子分段展开与折叠
@@ -107,18 +116,38 @@ export const SegmentItem: React.FC<{
     showToolTip(`${segment.startHex}-${segment.endHex}`, e.clientX, e.clientY);
   };
 
-  const handleMergeClick = () => {
-    setMergeDropdownVisible(!mergeDropdownVisible);
+  const handleContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
+    const newitems = [];
+    if (!isEditName) {
+      newitems.push({ label: "重命名（F2）", onClick: () => handleRename() });
+    }
+    if (segment.subSegments.length > 0) {
+      newitems.push({
+        label: isSubSegmentsExpanded ? "折叠子分段" : "展开子分段",
+        onClick: () => toggleSubSegments(),
+      });
+      newitems.push({
+        label: "清空子分段",
+        onClick: () => onClearSubSegments(),
+      });
+    }
+    if (indices[indices.length - 1]) {
+      newitems.push({ label: "向上合并", onClick: () => handleMergeUp() });
+    }
+
+    if (!isLastSegment) {
+      newitems.push({ label: "向下合并", onClick: () => handleMergeDown() });
+    }
+    e.preventDefault();
+    openContextMenu(newitems, e.clientX, e.clientY);
   };
 
-  // 合并分段按钮点击事件
-  const handleMerge = (direction: "up" | "down", e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (direction === "up") {
-      mergeSegmentsUp(indices);
-    } else {
-      mergeSegmentsDown(indices);
-    }
+  const handleMergeUp = () => {
+    mergeSegmentsUp(indices);
+  };
+
+  const handleMergeDown = () => {
+    mergeSegmentsDown(indices);
   };
 
   const handleItemClick = () => {
@@ -160,6 +189,7 @@ export const SegmentItem: React.FC<{
         style={{ marginLeft: `${(indices.length - 1) * 20}px` }} // 根据索引序列缩进
         onMouseEnter={handleMouseEnter}
         onMouseLeave={hideToolTip}
+        onContextMenu={handleContextMenu}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           {segment.subSegments.length > 0 ? (
@@ -188,30 +218,6 @@ export const SegmentItem: React.FC<{
         </div>
         {/* 
         <p>{`${segment.startHex}-${segment.endHex}`}</p> */}
-
-        <div className={style.buttons}>
-          <div className={style.dropdown}>
-            <button onClick={handleMergeClick}>...</button>
-            {mergeDropdownVisible && (
-              <div className={style.dropdownContent}>
-                {/* {0 && <button onClick={handleEdit}>编辑</button>} */}
-                {!isEditName && <button onClick={handleRename}>重命名</button>}
-                {segment.subSegments.length > 0 && (
-                  <button onClick={toggleSubSegments}>
-                    {isSubSegmentsExpanded ? "折叠子分段" : "展开子分段"}
-                  </button>
-                )}
-                {segment.subSegments.length && (
-                  <button onClick={onClearSubSegments}>清空子分段</button>
-                )}
-                {indices[indices.length - 1] && (
-                  <button onClick={e => handleMerge("up", e)}>向上合并</button>
-                )}
-                {!isLastSegment && <button onClick={e => handleMerge("down", e)}>向下合并</button>}
-              </div>
-            )}
-          </div>
-        </div>
       </div>
       {/* 递归渲染子分段 */}
       {isSubSegmentsExpanded && segment.subSegments.length > 0 && (
@@ -231,6 +237,7 @@ export const SegmentItem: React.FC<{
               // onEditSegment={() => {}}
               showToolTip={showToolTip}
               hideToolTip={hideToolTip}
+              openContextMenu={openContextMenu}
             />
           ))}
         </div>
@@ -239,14 +246,22 @@ export const SegmentItem: React.FC<{
   );
 };
 
-interface SegmentMenuProps {
-  setEditSegment: (segment: Segment | null) => void; // 定义 props
-}
+// interface SegmentMenuProps {
+//   setEditSegment: (segment: Segment | null) => void; // 定义 props
+// }
 
 export const SegmentMenu: React.FC<{
   showToolTip: (showText: string, mouseX: number, mouseY: number) => void;
   hideToolTip: () => void;
-}> = ({ showToolTip, hideToolTip }) => {
+  openContextMenu: (
+    myitems: {
+      label: string;
+      onClick: () => void;
+    }[],
+    mouseX: number,
+    mouseY: number,
+  ) => void;
+}> = ({ showToolTip, hideToolTip, openContextMenu }) => {
   const ctx = useDisplayContext();
   const fileSize = useRecoilValue(select.fileSize) ?? 0; // 如果为undefined，则默认为0
   const [menuItems, setMenuItems] = useState([new Segment("全文", 0, fileSize - 1)]); // 第一个分段为全文
@@ -631,6 +646,7 @@ export const SegmentMenu: React.FC<{
     <div className={style.segmentMenuContainer}>
       <button onClick={createSubSegment}>创建子分段</button>
       <button onClick={separateSelectedContent}>分隔选中内容</button>
+      <hr />
       {menuItems.map((item, index) => (
         <SegmentItem
           key={index}
@@ -646,6 +662,7 @@ export const SegmentMenu: React.FC<{
           // onEditSegment={handleEditSegment}
           showToolTip={showToolTip}
           hideToolTip={hideToolTip}
+          openContextMenu={openContextMenu}
         />
       ))}
       {selectedSegmentIndices.length > 0 && (
