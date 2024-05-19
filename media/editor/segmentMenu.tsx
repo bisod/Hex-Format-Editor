@@ -6,8 +6,10 @@ import { useRecoilValue } from "recoil";
 import { MessageType } from "../../shared/protocol";
 import { Range } from "../../shared/util/range";
 import { useDisplayContext } from "./dataDisplayContext";
+import { inspectableTypes } from "./dataInspectorProperties";
 import _style from "./segmentMenu.css";
 import * as select from "./state"; // 导入状态管理相关的模块
+import { MenuItem } from "./toolTip";
 import { throwOnUndefinedAccessInDev } from "./util";
 
 const style = throwOnUndefinedAccessInDev(_style);
@@ -72,19 +74,9 @@ export const SegmentItem: React.FC<{
   onClick: (indices: number[]) => void; // 点击事件处理函数
   mergeSegmentsUp: (indices: number[]) => void;
   mergeSegmentsDown: (indices: number[]) => void;
-  clearSubSegments: (indices: number[]) => void;
-  renameSegment: (indices: number[], newName: string) => void; // 重命名分段回调函数
   showToolTip: (showText: string, mouseX: number, mouseY: number) => void;
   hideToolTip: () => void;
-  openContextMenu: (
-    myitems: {
-      label: string;
-      onClick: () => void;
-    }[],
-    mouseX: number,
-    mouseY: number,
-  ) => void;
-  // onEditSegment: (segment: Segment) => void;
+  openContextMenu: (myitems: MenuItem[], mouseX: number, mouseY: number) => void;
 }> = ({
   segment,
   indices,
@@ -93,31 +85,24 @@ export const SegmentItem: React.FC<{
   onClick,
   mergeSegmentsUp,
   mergeSegmentsDown,
-  clearSubSegments,
-  renameSegment,
   showToolTip,
   hideToolTip,
   openContextMenu,
-  // onEditSegment,
 }) => {
-  // const [mergeDropdownVisible, setMergeDropdownVisible] = useState(false);
   const [isEditName, setIsEditName] = useState(false);
   const [newName, setNewName] = useState(segment.name);
   const [isSubSegmentsExpanded, setIsSubSegmentsExpanded] = useState(true); // 控制子分段展开与折叠
 
-  // const handleEdit = (e: React.MouseEvent) => {
-  //   e.stopPropagation();
-  //   // 调用父组件传递过来的设置编辑状态的函数
-  //   onEditSegment(segment);
-  //   console.log(`编辑分段: ${segment.name}`);
-  // };
-
   const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
-    showToolTip(`${segment.startHex}-${segment.endHex}`, e.clientX, e.clientY);
+    showToolTip(
+      `偏移：${segment.startHex}-${segment.endHex}  格式：${segment.displayFormat}`,
+      e.clientX,
+      e.clientY - 10,
+    );
   };
 
   const handleContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
-    const newitems = [];
+    const newitems: MenuItem[] = [];
     if (!isEditName) {
       newitems.push({ label: "重命名（F2）", onClick: () => handleRename() });
     }
@@ -138,6 +123,22 @@ export const SegmentItem: React.FC<{
     if (!isLastSegment) {
       newitems.push({ label: "向下合并", onClick: () => handleMergeDown() });
     }
+    // 添加规定格式选项
+    const formatOptions = inspectableTypes
+      .filter(type => segment.length >= type.minBytes && 0 === segment.length % type.minBytes)
+      .map(type => ({
+        label: type.label,
+        onClick: () => {
+          segment.setDisplayFormat(type.label);
+        },
+      }));
+    if (formatOptions.length > 0) {
+      newitems.push({
+        label: "规定格式",
+        onClick: () => {},
+        subItems: formatOptions,
+      });
+    }
     e.preventDefault();
     openContextMenu(newitems, e.clientX, e.clientY);
   };
@@ -155,12 +156,12 @@ export const SegmentItem: React.FC<{
   };
 
   const onClearSubSegments = () => {
-    clearSubSegments(indices);
+    segment.subSegments = [];
   };
 
   const handleRename = () => {
     if (isEditName) {
-      renameSegment(indices, newName);
+      segment.name = newName;
       setIsEditName(false);
     } else {
       setIsEditName(true);
@@ -231,8 +232,6 @@ export const SegmentItem: React.FC<{
             </div>
           </div>
         </div>
-        {/* 
-        <p>{`${segment.startHex}-${segment.endHex}`}</p> */}
       </div>
       {/* 递归渲染子分段 */}
       {isSubSegmentsExpanded && segment.subSegments.length > 0 && (
@@ -247,8 +246,8 @@ export const SegmentItem: React.FC<{
               onClick={onClick} // 透传点击事件处理函数
               mergeSegmentsUp={mergeSegmentsUp}
               mergeSegmentsDown={mergeSegmentsDown}
-              clearSubSegments={clearSubSegments}
-              renameSegment={renameSegment}
+              // clearSubSegments={clearSubSegments}
+              // renameSegment={renameSegment}
               // onEditSegment={() => {}}
               showToolTip={showToolTip}
               hideToolTip={hideToolTip}
@@ -268,14 +267,7 @@ export const SegmentItem: React.FC<{
 export const SegmentMenu: React.FC<{
   showToolTip: (showText: string, mouseX: number, mouseY: number) => void;
   hideToolTip: () => void;
-  openContextMenu: (
-    myitems: {
-      label: string;
-      onClick: () => void;
-    }[],
-    mouseX: number,
-    mouseY: number,
-  ) => void;
+  openContextMenu: (myitems: MenuItem[], mouseX: number, mouseY: number) => void;
 }> = ({ showToolTip, hideToolTip, openContextMenu }) => {
   const ctx = useDisplayContext();
   const fileSize = useRecoilValue(select.fileSize) ?? 0; // 如果为undefined，则默认为0
@@ -646,17 +638,6 @@ export const SegmentMenu: React.FC<{
     }
   };
 
-  // 清空选中分段的所有子分段
-  const clearSubSegments = (segmentIndices: number[]) => {
-    const clearSegment = getSegmentByIndices(segmentIndices); // 获取父分段
-    clearSegment.subSegments = [];
-  };
-
-  const renameSegment = (segmentIndices: number[], newName: string) => {
-    const clearSegment = getSegmentByIndices(segmentIndices); // 获取父分段
-    clearSegment.name = newName;
-  };
-
   return (
     <div className={style.segmentMenuContainer}>
       <button onClick={createSubSegment}>创建子分段</button>
@@ -672,9 +653,6 @@ export const SegmentMenu: React.FC<{
           onClick={(clickedIndices: number[]) => handleMenuItemClick(clickedIndices)}
           mergeSegmentsUp={(indices: number[]) => mergeSegmentsUp(indices)}
           mergeSegmentsDown={(indices: number[]) => mergeSegmentsDown(indices)}
-          clearSubSegments={(indices: number[]) => clearSubSegments(indices)}
-          renameSegment={(indices: number[], newName: string) => renameSegment(indices, newName)}
-          // onEditSegment={handleEditSegment}
           showToolTip={showToolTip}
           hideToolTip={hideToolTip}
           openContextMenu={openContextMenu}

@@ -1,4 +1,8 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
+import _style from "./toolTip.css";
+import { throwOnUndefinedAccessInDev } from "./util";
+
+const style = throwOnUndefinedAccessInDev(_style);
 
 export interface TooltipProps {
   isVisible: boolean;
@@ -11,15 +15,10 @@ export const ToolTip: React.FC<TooltipProps> = ({ isVisible, text, position }) =
     <>
       {isVisible && (
         <div
+          className={style.toolTip}
           style={{
-            position: "absolute",
             left: position.left,
             top: position.top,
-            background: "rgba(0, 0, 0, 0.8)",
-            color: "#fff",
-            padding: "4px 8px",
-            borderRadius: "4px",
-            zIndex: 9999,
           }}
         >
           {text}
@@ -29,9 +28,15 @@ export const ToolTip: React.FC<TooltipProps> = ({ isVisible, text, position }) =
   );
 };
 
+export interface MenuItem {
+  label: string;
+  onClick: () => void;
+  subItems?: MenuItem[];
+}
+
 export interface ContextMenuProps {
   isVisible: boolean;
-  items: { label: string; onClick: () => void }[];
+  items: MenuItem[];
   onClose: () => void;
   position: { left: number; top: number };
 }
@@ -42,32 +47,80 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   onClose,
   position,
 }) => {
+  const [subMenuIndex, setSubMenuIndex] = useState<number | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
   const handleItemClick = (onClick: () => void) => {
     onClick();
     onClose();
   };
 
+  const handleSubMenuClick = (index: number) => {
+    setSubMenuIndex(index === subMenuIndex ? null : index);
+  };
+
+  const handleClickOutside = (event: MouseEvent) => {
+    if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      onClose();
+    }
+  };
+
+  useEffect(() => {
+    if (isVisible) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isVisible]);
+
   return (
     <>
       {isVisible && (
         <div
+          ref={menuRef}
+          className={style.contextMenu}
           style={{
-            position: "absolute",
             left: position.left,
             top: position.top,
-            background: "#fff",
-            boxShadow: "0px 0px 4px rgba(0, 0, 0, 0.2)",
-            borderRadius: "4px",
-            zIndex: 9999,
           }}
         >
           {items.map((item, index) => (
-            <div
-              key={index}
-              onClick={() => handleItemClick(item.onClick)}
-              style={{ padding: "8px 12px", cursor: "pointer" }}
-            >
-              {item.label}
+            <div key={index} style={{ position: "relative" }}>
+              <div
+                className={style.item}
+                onClick={() => {
+                  if (item.subItems) {
+                    handleSubMenuClick(index);
+                  } else {
+                    handleItemClick(item.onClick);
+                  }
+                }}
+              >
+                {item.label}
+              </div>
+              {item.subItems && index === subMenuIndex && (
+                <div
+                  className={style.subItem}
+                  style={{
+                    left: "100%",
+                    top: 0,
+                  }}
+                >
+                  {item.subItems.map((subItem, subIndex) => (
+                    <div
+                      className={style.item}
+                      key={subIndex}
+                      onClick={() => handleItemClick(subItem.onClick)}
+                    >
+                      {subItem.label}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>

@@ -14,7 +14,7 @@ import { SegmentMenu } from "./segmentMenu";
 import { SettingsGear } from "./settings";
 import * as select from "./state";
 import { strings } from "./strings";
-import { ContextMenu, ContextMenuProps, ToolTip, TooltipProps } from "./toolTip"; // 导入 Tooltip 组件
+import { ContextMenu, ContextMenuProps, MenuItem, ToolTip, TooltipProps } from "./toolTip"; // 导入 Tooltip 组件
 import { throwOnUndefinedAccessInDev } from "./util";
 import { VsProgressIndicator } from "./vscodeUi";
 
@@ -92,14 +92,7 @@ const Editor: React.FC = () => {
     setTooltipProps({ isVisible: false, text: "", position: { left: 0, top: 0 } });
   };
 
-  const openContextMenu = (
-    myitems: {
-      label: string;
-      onClick: () => void;
-    }[],
-    mouseX: number,
-    mouseY: number,
-  ) => {
+  const openContextMenu = (myitems: MenuItem[], mouseX: number, mouseY: number) => {
     const mousePosition = { left: mouseX, top: mouseY };
     setContextMenuProps({
       isVisible: true,
