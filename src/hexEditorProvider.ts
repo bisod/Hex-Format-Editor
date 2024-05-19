@@ -242,6 +242,8 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
       openAnyways: vscode.l10n.t("Open Anyways"),
       readonlyWarning: vscode.l10n.t("Cannot edit in read-only editor."),
       openSettings: vscode.l10n.t("Open Settings"),
+      expandedSubSegments: vscode.l10n.t("Expanded SubSegments"),
+      collapsedSubSegments: vscode.l10n.t("Collapsed SubSegments"),
       showDecodedText: vscode.l10n.t("Show Decoded Text"),
       bytesPerRow: vscode.l10n.t("Bytes per row"),
       close: vscode.l10n.t("Close"),

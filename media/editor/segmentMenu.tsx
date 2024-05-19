@@ -1,3 +1,6 @@
+import ListSelection from "@vscode/codicons/src/icons/list-selection.svg";
+import TriangleDown from "@vscode/codicons/src/icons/triangle-down.svg";
+import TriangleRight from "@vscode/codicons/src/icons/triangle-right.svg";
 import React, { useState } from "react";
 import { useRecoilValue } from "recoil";
 import { MessageType } from "../../shared/protocol";
@@ -71,7 +74,9 @@ export const SegmentItem: React.FC<{
   mergeSegmentsDown: (indices: number[]) => void;
   clearSubSegments: (indices: number[]) => void;
   renameSegment: (indices: number[], newName: string) => void; // 重命名分段回调函数
-  onEditSegment: (segment: Segment) => void;
+  showToolTip: (showText: string, mouseX: number, mouseY: number) => void;
+  hideToolTip: () => void;
+  // onEditSegment: (segment: Segment) => void;
 }> = ({
   segment,
   indices,
@@ -82,18 +87,24 @@ export const SegmentItem: React.FC<{
   mergeSegmentsDown,
   clearSubSegments,
   renameSegment,
-  onEditSegment,
+  showToolTip,
+  hideToolTip,
+  // onEditSegment,
 }) => {
   const [mergeDropdownVisible, setMergeDropdownVisible] = useState(false);
   const [isEditName, setIsEditName] = useState(false);
   const [newName, setNewName] = useState(segment.name);
   const [isSubSegmentsExpanded, setIsSubSegmentsExpanded] = useState(true); // 控制子分段展开与折叠
 
-  const handleEdit = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    // 调用父组件传递过来的设置编辑状态的函数
-    onEditSegment(segment);
-    console.log(`编辑分段: ${segment.name}`);
+  // const handleEdit = (e: React.MouseEvent) => {
+  //   e.stopPropagation();
+  //   // 调用父组件传递过来的设置编辑状态的函数
+  //   onEditSegment(segment);
+  //   console.log(`编辑分段: ${segment.name}`);
+  // };
+
+  const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
+    showToolTip(`${segment.startHex}-${segment.endHex}`, e.clientX, e.clientY);
   };
 
   const handleMergeClick = () => {
@@ -147,22 +158,43 @@ export const SegmentItem: React.FC<{
         className={`${style.segment} ${selectedIndices.join(",") === indices.join(",") ? style.selected : ""}`}
         onClick={handleItemClick} // 修改点击事件处理函数
         style={{ marginLeft: `${(indices.length - 1) * 20}px` }} // 根据索引序列缩进
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={hideToolTip}
       >
-        {isEditName ? (
-          <input type="text" value={newName} onChange={handleChange} onKeyDown={handleKeyDown} />
-        ) : (
-          <div className={style.segmentName}>{segment.name}</div>
-        )}
-        <div>
-          <p>{`${segment.startHex}-${segment.endHex}`}</p>
-          <p>{`长度: ${segment.length}`}</p>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          {segment.subSegments.length > 0 ? (
+            <div onClick={toggleSubSegments} style={{ marginRight: "4px" }}>
+              {isSubSegmentsExpanded ? <TriangleDown /> : <TriangleRight />}
+            </div>
+          ) : (
+            <ListSelection style={{ marginRight: "2px" }} />
+          )}
+          <div style={{ flexGrow: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              {isEditName ? (
+                <input
+                  style={{ width: "100%" }}
+                  type="text"
+                  value={newName}
+                  onChange={handleChange}
+                  onKeyDown={handleKeyDown}
+                />
+              ) : (
+                <div className={style.segmentName}>{segment.name}</div>
+              )}
+              <div className={style.segmentLength}>{`${segment.length}B`}</div>
+            </div>
+          </div>
         </div>
+        {/* 
+        <p>{`${segment.startHex}-${segment.endHex}`}</p> */}
+
         <div className={style.buttons}>
           <div className={style.dropdown}>
             <button onClick={handleMergeClick}>...</button>
             {mergeDropdownVisible && (
               <div className={style.dropdownContent}>
-                {0 && <button onClick={handleEdit}>编辑</button>}
+                {/* {0 && <button onClick={handleEdit}>编辑</button>} */}
                 {!isEditName && <button onClick={handleRename}>重命名</button>}
                 {segment.subSegments.length > 0 && (
                   <button onClick={toggleSubSegments}>
@@ -196,7 +228,9 @@ export const SegmentItem: React.FC<{
               mergeSegmentsDown={mergeSegmentsDown}
               clearSubSegments={clearSubSegments}
               renameSegment={renameSegment}
-              onEditSegment={() => {}}
+              // onEditSegment={() => {}}
+              showToolTip={showToolTip}
+              hideToolTip={hideToolTip}
             />
           ))}
         </div>
@@ -209,7 +243,10 @@ interface SegmentMenuProps {
   setEditSegment: (segment: Segment | null) => void; // 定义 props
 }
 
-export const SegmentMenu: React.FC<SegmentMenuProps> = ({ setEditSegment }) => {
+export const SegmentMenu: React.FC<{
+  showToolTip: (showText: string, mouseX: number, mouseY: number) => void;
+  hideToolTip: () => void;
+}> = ({ showToolTip, hideToolTip }) => {
   const ctx = useDisplayContext();
   const fileSize = useRecoilValue(select.fileSize) ?? 0; // 如果为undefined，则默认为0
   const [menuItems, setMenuItems] = useState([new Segment("全文", 0, fileSize - 1)]); // 第一个分段为全文
@@ -227,9 +264,9 @@ export const SegmentMenu: React.FC<SegmentMenuProps> = ({ setEditSegment }) => {
   };
 
   // 定义一个函数来设置编辑状态
-  const handleEditSegment = (segment: Segment) => {
-    setEditSegment(segment);
-  };
+  // const handleEditSegment = (segment: Segment) => {
+  //   setEditSegment(segment);
+  // };
 
   // 分割选中的内容
   const separateSelectedContent = () => {
@@ -606,7 +643,9 @@ export const SegmentMenu: React.FC<SegmentMenuProps> = ({ setEditSegment }) => {
           mergeSegmentsDown={(indices: number[]) => mergeSegmentsDown(indices)}
           clearSubSegments={(indices: number[]) => clearSubSegments(indices)}
           renameSegment={(indices: number[], newName: string) => renameSegment(indices, newName)}
-          onEditSegment={handleEditSegment}
+          // onEditSegment={handleEditSegment}
+          showToolTip={showToolTip}
+          hideToolTip={hideToolTip}
         />
       ))}
       {selectedSegmentIndices.length > 0 && (

@@ -3,7 +3,7 @@
   height: 680px;
   background-color: #333;
   color: #fff;
-  font-family: Arial, sans-serif;
+  font-family: var(--vscode-editor-font-family);
   padding: 20px; /* 调整padding为20px */
   overflow-y: auto; /* 添加垂直滚动条 */
 }
@@ -26,9 +26,14 @@
 }
 
 .segment-name {
-  font-weight: bold;
-  margin-bottom: 5px;
-  font-size: 16px;
+  width: 100%;
+  flex-grow: 1;
+}
+
+.segment-length {
+  text-align: right;
+  color: #0a725f;
+  margin-left: auto;
 }
 
 .button {

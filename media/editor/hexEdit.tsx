@@ -10,11 +10,11 @@ import _style from "./hexEdit.css";
 import { useTheme } from "./hooks";
 import { ReadonlyWarning } from "./readonlyWarning";
 import { ScrollContainer } from "./scrollContainer";
-import { SegmentEdit } from "./segmentEdit";
-import { Segment, SegmentMenu } from "./segmentMenu";
+import { SegmentMenu } from "./segmentMenu";
 import { SettingsGear } from "./settings";
 import * as select from "./state";
 import { strings } from "./strings";
+import { ToolTip, TooltipProps } from "./toolTip"; // 导入 Tooltip 组件
 import { throwOnUndefinedAccessInDev } from "./util";
 import { VsProgressIndicator } from "./vscodeUi";
 
@@ -69,8 +69,21 @@ const Editor: React.FC = () => {
   // 获取是否绕过大文件提示的状态值和设置该状态的状态钩子
   const [bypassLargeFilePrompt, setBypassLargeFile] = useRecoilState(select.bypassLargeFilePrompt);
 
-  const [editSegment, setEditSegment] = useState<Segment | null>(null); // 控制是否显示编辑组件
+  // const [editSegment, setEditSegment] = useState<Segment | null>(null); // 控制是否显示编辑组件
+  const [tooltipProps, setTooltipProps] = useState<TooltipProps>({
+    isVisible: false,
+    text: "",
+    position: { left: 0, top: 0 },
+  });
 
+  const showToolTip = (showText: string, mouseX: number, mouseY: number) => {
+    const mousePosition = { left: mouseX, top: mouseY };
+    setTooltipProps({ isVisible: true, text: showText, position: mousePosition });
+  };
+
+  const hideToolTip = () => {
+    setTooltipProps({ isVisible: false, text: "", position: { left: 0, top: 0 } });
+  };
   // 如果是大文件且未绕过大文件提示，则渲染提示信息
   if (isLargeFile && !bypassLargeFilePrompt) {
     return (
@@ -88,8 +101,14 @@ const Editor: React.FC = () => {
   return (
     // 提供数据显示上下文的 Provider
     <DataDisplayContext.Provider value={ctx}>
+      <ToolTip
+        isVisible={tooltipProps.isVisible}
+        text={tooltipProps.text}
+        position={tooltipProps.position}
+      />
       {/* 左侧菜单栏 */}
-      <SegmentMenu setEditSegment={setEditSegment} />
+      {/* <SegmentMenu setEditSegment={setEditSegment} /> */}
+      <SegmentMenu showToolTip={showToolTip} hideToolTip={hideToolTip} />
       <div
         className={style.container}
         style={{ "--cell-size": `${dimensions.rowPxHeight}px` } as React.CSSProperties}
@@ -98,17 +117,21 @@ const Editor: React.FC = () => {
         <FindWidget />
         {/* 设置按钮 */}
         <SettingsGear />
-        {editSegment ? null : (
+        {/* 数据头部信息 */}
+        <DataHeader />
+        {/* 数据滚动容器 */}
+        <ScrollContainer />
+        {/* {editSegment ? null : (
           <>
-            {/* 数据头部信息 */}
+
             <DataHeader />
-            {/* 数据滚动容器 */}
+
             <ScrollContainer />
           </>
-        )}
+        )} */}
         {/* 如果 editSegment 存在，则渲染 SegmentEdit 组件 */}
-        {editSegment && <SegmentEdit segment={editSegment} onClose={() => setEditSegment(null)} />}
-        {editSegment && <DataInspectorHover />}
+        {/* {editSegment && <SegmentEdit segment={editSegment} onClose={() => setEditSegment(null)} />}
+        {editSegment && <DataInspectorHover />} */}
         {/* 只读警告 */}
         <ReadonlyWarning />
         {/* 数据检查器悬停信息 */}
