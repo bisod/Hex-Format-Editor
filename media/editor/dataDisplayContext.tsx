@@ -112,9 +112,9 @@ export class DisplayContext {
     element: FocusedElement,
     listener: (isFocused: boolean) => void,
   ): IDisposable {
-    if (this.focusChangeHandlers.has(element.key)) {
-      throw new Error(`Duplicate focus change handler for byte ${element.byte}`);
-    }
+    // if (this.focusChangeHandlers.has(element.key)) {
+    //   throw new Error(`Duplicate focus change handler for byte ${element.byte}`);
+    // }
 
     this.focusChangeHandlers.set(element.key, listener);
     return { dispose: () => this.focusChangeHandlers.delete(element.key) };
@@ -132,9 +132,9 @@ export class DisplayContext {
     element: FocusedElement,
     listener: (isHovered: boolean) => void,
   ): IDisposable {
-    if (this.hoverChangeHandlers.has(element.key)) {
-      throw new Error(`Duplicate hover change handler for byte ${element.byte}`);
-    }
+    // if (this.hoverChangeHandlers.has(element.key)) {
+    //   throw new Error(`Duplicate hover change handler for byte ${element.byte}`);
+    // }
 
     this.hoverChangeHandlers.set(element.key, listener);
     return { dispose: () => this.hoverChangeHandlers.delete(element.key) };

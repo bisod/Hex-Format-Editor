@@ -2,11 +2,10 @@ import ListSelection from "@vscode/codicons/src/icons/list-selection.svg";
 import TriangleDown from "@vscode/codicons/src/icons/triangle-down.svg";
 import TriangleRight from "@vscode/codicons/src/icons/triangle-right.svg";
 import React, { useEffect, useState } from "react";
-import { useRecoilValue } from "recoil";
 import { MessageType } from "../../shared/protocol";
 import { Range } from "../../shared/util/range";
 import { useDisplayContext } from "./dataDisplayContext";
-import { inspectableTypes } from "./dataInspectorProperties";
+import { IFormat, formatManager } from "./dataInspectorProperties";
 import _style from "./segmentMenu.css";
 import * as select from "./state"; // 导入状态管理相关的模块
 import { MenuItem } from "./toolTip";
@@ -50,6 +49,15 @@ export class Segment {
   private toHex(position: number): string {
     return position.toString(16).padStart(10, "0");
   }
+  toIFormat(): IFormat {
+    const iFormat: IFormat = {
+      label: this.name,
+      minBytes: this.length,
+      useNumber: 0,
+      subStructures: this.subSegments.map(subSegment => subSegment.toIFormat()),
+    };
+    return iFormat;
+  }
 
   // 设置显示格式
   setDisplayFormat(format: string) {
@@ -65,7 +73,7 @@ export class Segment {
     this.subSegments.push(...subSegments);
   }
 
-  splitSegmentByFormat(format: string, splitLength: number) {
+  createSubSegmentByFormat(format: string, splitLength: number) {
     if (this.subSegments.length > 0) {
       showWarningMessage(`已经拥有分段格式，不可划分，请清除分段后再尝试`);
       return;
@@ -102,6 +110,7 @@ export const SegmentItem: React.FC<{
   showToolTip: (showText: string, mouseX: number, mouseY: number) => void;
   hideToolTip: () => void;
   openContextMenu: (myitems: MenuItem[], mouseX: number, mouseY: number) => void;
+  splitSegmentByFormat: (segmentIndices: number[], format: string, splitLength: number) => void;
 }> = ({
   segment,
   indices,
@@ -113,6 +122,7 @@ export const SegmentItem: React.FC<{
   showToolTip,
   hideToolTip,
   openContextMenu,
+  splitSegmentByFormat,
 }) => {
   const [isEditName, setIsEditName] = useState(false);
   const [newName, setNewName] = useState(segment.name);
@@ -157,7 +167,8 @@ export const SegmentItem: React.FC<{
 
     if (segment.subSegments.length === 0) {
       // 添加规定格式选项
-      const formatOptions = inspectableTypes
+      const formatOptions = formatManager
+        .getFormats()
         .filter(type => segment.length >= type.minBytes && 0 === segment.length % type.minBytes)
         .map(type => ({
           label: type.label,
@@ -174,19 +185,39 @@ export const SegmentItem: React.FC<{
       }
 
       // 添加划分格式选项
-      const formatSplit = inspectableTypes
+      const formatSplit = formatManager
+        .getFormats()
         .filter(type => segment.length >= type.minBytes && 0 === segment.length % type.minBytes)
         .map(type => ({
           label: `${type.label}(${type.minBytes}B/段)`,
           onClick: () => {
-            segment.splitSegmentByFormat(type.label, type.minBytes);
+            console.log("onclick");
+            splitSegmentByFormat(indices, type.label, type.minBytes);
           },
         }));
       if (formatSplit.length > 0) {
         newitems.push({
-          label: "批量划分格式",
+          label: "批量分隔当前分段",
           onClick: () => {},
           subItems: formatSplit,
+        });
+      }
+
+      // 添加划分格式选项
+      const formatCreate = formatManager
+        .getFormats()
+        .filter(type => segment.length >= type.minBytes && 0 === segment.length % type.minBytes)
+        .map(type => ({
+          label: `${type.label}(${type.minBytes}B/段)`,
+          onClick: () => {
+            segment.createSubSegmentByFormat(type.label, type.minBytes);
+          },
+        }));
+      if (formatCreate.length > 0) {
+        newitems.push({
+          label: "批量创建子分段",
+          onClick: () => {},
+          subItems: formatCreate,
         });
       }
     }
@@ -310,6 +341,7 @@ export const SegmentItem: React.FC<{
               showToolTip={showToolTip}
               hideToolTip={hideToolTip}
               openContextMenu={openContextMenu}
+              splitSegmentByFormat={splitSegmentByFormat}
             />
           ))}
         </div>
@@ -323,13 +355,16 @@ export const SegmentItem: React.FC<{
 // }
 
 export const SegmentMenu: React.FC<{
+  menuItems: Segment[];
+  // setMenuItems: (newItems: Segment[]) => void;
+  setMenuItems: React.Dispatch<React.SetStateAction<Segment[]>>;
   showToolTip: (showText: string, mouseX: number, mouseY: number) => void;
   hideToolTip: () => void;
   openContextMenu: (myitems: MenuItem[], mouseX: number, mouseY: number) => void;
-}> = ({ showToolTip, hideToolTip, openContextMenu }) => {
+}> = ({ showToolTip, hideToolTip, openContextMenu, menuItems, setMenuItems }) => {
   const ctx = useDisplayContext();
-  const fileSize = useRecoilValue(select.fileSize) ?? 0; // 如果为undefined，则默认为0
-  const [menuItems, setMenuItems] = useState([new Segment("全文", 0, fileSize - 1)]); // 第一个分段为全文
+  // const fileSize = useRecoilValue(select.fileSize) ?? 0; // 如果为undefined，则默认为0
+  // const [menuItems, setMenuItems] = useState([new Segment("全文", 0, fileSize - 1)]); // 第一个分段为全文
   const [selectedSegmentIndices, setSelectedSegmentIndices] = useState<number[]>([]); // 选中的分段索引序列
   const [nameIndex, setNameIndex] = useState(1);
 
@@ -696,6 +731,67 @@ export const SegmentMenu: React.FC<{
     }
   };
 
+  const splitSegmentByFormat = (segmentIndices: number[], format: string, splitLength: number) => {
+    const index = segmentIndices[segmentIndices.length - 1];
+    if (segmentIndices.length === 1) {
+      const currentSegment = menuItems[index];
+      if (currentSegment.subSegments.length > 0) {
+        showWarningMessage(`已经拥有分段格式，不可划分，请清除分段后再尝试`);
+        return;
+      }
+      // 检查当前分段长度是否符合拆分要求
+      if (currentSegment.length % splitLength !== 0) {
+        showWarningMessage(`段长 (${currentSegment.length}) 无法整除数据格式长度 (${splitLength})`);
+        return;
+      }
+
+      const numSegments = currentSegment.length / splitLength;
+      const newItems: Segment[] = [];
+      // 根据拆分后的数量创建子分段
+      for (let i = 0; i < numSegments; i++) {
+        const start = currentSegment.start + i * splitLength;
+        const end = start + splitLength - 1;
+        const subSegmentName = `${currentSegment.name}_${format}_${i + 1}`;
+        const subSegment = new Segment(subSegmentName, start, end, format);
+        newItems.push(subSegment);
+      }
+
+      setMenuItems([...menuItems.slice(0, index), ...newItems, ...menuItems.slice(index + 1)]);
+      setSelectedSegmentIndices([]); // 更新选中分段的索引序列
+    } else {
+      const parentIndices = segmentIndices.slice(0, -1); // 获取父分段的索引序列
+      const parentSegment = getSegmentByIndices(parentIndices, menuItems); // 获取父分段
+      // parentSegment.createSubSegmentByFormat(format, splitLength);
+      const currentSegment = getSegmentByIndices(segmentIndices, menuItems);
+      if (currentSegment.subSegments.length > 0) {
+        showWarningMessage(`已经拥有分段格式，不可划分，请清除分段后再尝试`);
+        return;
+      }
+      // 检查当前分段长度是否符合拆分要求
+      if (currentSegment.length % splitLength !== 0) {
+        showWarningMessage(`段长 (${currentSegment.length}) 无法整除数据格式长度 (${splitLength})`);
+        return;
+      }
+
+      const numSegments = currentSegment.length / splitLength;
+      const newItems: Segment[] = [];
+      // 根据拆分后的数量创建子分段
+      for (let i = 0; i < numSegments; i++) {
+        const start = currentSegment.start + i * splitLength;
+        const end = start + splitLength - 1;
+        const subSegmentName = `${currentSegment.name}_${format}_${i + 1}`;
+        const subSegment = new Segment(subSegmentName, start, end, format);
+        newItems.push(subSegment);
+      }
+      parentSegment.subSegments = [
+        ...menuItems.slice(0, index),
+        ...newItems,
+        ...menuItems.slice(index + 1),
+      ];
+      setSelectedSegmentIndices([]); // 更新选中分段的索引序列
+    }
+  };
+
   return (
     <div className={style.segmentMenuContainer}>
       <button onClick={createSubSegment}>创建子分段</button>
@@ -714,6 +810,7 @@ export const SegmentMenu: React.FC<{
           showToolTip={showToolTip}
           hideToolTip={hideToolTip}
           openContextMenu={openContextMenu}
+          splitSegmentByFormat={splitSegmentByFormat}
         />
       ))}
       {selectedSegmentIndices.length > 0 && (

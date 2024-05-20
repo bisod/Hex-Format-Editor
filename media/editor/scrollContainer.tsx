@@ -3,6 +3,7 @@ import { useRecoilState, useRecoilValue } from "recoil";
 import { Range } from "../../shared/util/range"; // 导入Range类
 import { DataDisplay } from "./dataDisplay"; // 导入数据展示组件
 import _style from "./scrollContainer.css"; // 导入样式
+import { Segment } from "./segmentMenu";
 import * as select from "./state"; // 导入状态管理相关的模块
 import { throwOnUndefinedAccessInDev } from "./util"; // 导入工具函数
 import { VirtualScrollContainer } from "./virtualScrollContainer"; // 导入虚拟滚动容器组件
@@ -16,7 +17,9 @@ const style = throwOnUndefinedAccessInDev(_style); // 使用工具函数处理�
  */
 const loadThreshold = 0.5; // 加载数据的超滚动量阈值
 
-export const ScrollContainer: React.FC = () => {
+export const ScrollContainer: React.FC<{
+  segmentMenu: Segment[];
+}> = ({ segmentMenu }) => {
   // 定义滚动容器组件
   // 使用Recoil钩子获取全局状态值
   const dimension = useRecoilValue(select.dimensions); // 获取维度信息
@@ -92,7 +95,7 @@ export const ScrollContainer: React.FC = () => {
       onScroll={onScroll}
     >
       {/* 渲染数据展示组件 */}
-      <DataDisplay />
+      <DataDisplay segmentMenu={segmentMenu} />
     </VirtualScrollContainer>
   );
 };

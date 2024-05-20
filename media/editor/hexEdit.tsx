@@ -10,7 +10,7 @@ import _style from "./hexEdit.css";
 import { useTheme } from "./hooks";
 import { ReadonlyWarning } from "./readonlyWarning";
 import { ScrollContainer } from "./scrollContainer";
-import { SegmentMenu } from "./segmentMenu";
+import { Segment, SegmentMenu } from "./segmentMenu";
 import { SettingsGear } from "./settings";
 import * as select from "./state";
 import { strings } from "./strings";
@@ -68,7 +68,9 @@ const Editor: React.FC = () => {
   const isLargeFile = useRecoilValue(select.isLargeFile);
   // 获取是否绕过大文件提示的状态值和设置该状态的状态钩子
   const [bypassLargeFilePrompt, setBypassLargeFile] = useRecoilState(select.bypassLargeFilePrompt);
-
+  // const [segmentMenu, setSegmentMenu] = useState<Segment[]>(); // 第一个分段为全文
+  const fileSize = useRecoilValue(select.fileSize) ?? 0; // 如果为undefined，则默认为0
+  const [segmentMenu, setSegmentMenu] = useState([new Segment("全文", 0, fileSize - 1)]); // 第一个分段为全文
   // const [editSegment, setEditSegment] = useState<Segment | null>(null); // 控制是否显示编辑组件
   const [tooltipProps, setTooltipProps] = useState<TooltipProps>({
     isVisible: false,
@@ -141,6 +143,8 @@ const Editor: React.FC = () => {
       {/* 左侧菜单栏 */}
       {/* <SegmentMenu setEditSegment={setEditSegment} /> */}
       <SegmentMenu
+        menuItems={segmentMenu}
+        setMenuItems={setSegmentMenu}
         showToolTip={showToolTip}
         hideToolTip={hideToolTip}
         openContextMenu={openContextMenu}
@@ -156,7 +160,7 @@ const Editor: React.FC = () => {
         {/* 数据头部信息 */}
         <DataHeader />
         {/* 数据滚动容器 */}
-        <ScrollContainer />
+        <ScrollContainer segmentMenu={segmentMenu} />
         {/* {editSegment ? null : (
           <>
 

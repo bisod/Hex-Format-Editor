@@ -115,6 +115,37 @@ const inspectTypesBuilder: IInspectableType[] = [
     minBytes: 2,
     convert: (dv, le) => convertByChunk(dv, 2, dataView => dataView.getInt16(0, le).toString()),
   },
+  {
+    label: "uint32",
+    minBytes: 4,
+    convert: (dv, le) => convertByChunk(dv, 4, dataView => dataView.getUint32(0, le).toString()),
+  },
+  {
+    label: "int32",
+    minBytes: 4,
+    convert: (dv, le) => convertByChunk(dv, 4, dataView => dataView.getInt32(0, le).toString()),
+  },
+  {
+    label: "uint64",
+    minBytes: 8,
+    convert: (dv, le) => convertByChunk(dv, 8, dataView => dataView.getBigUint64(0, le).toString()),
+  },
+  {
+    label: "int64",
+    minBytes: 8,
+    convert: (dv, le) => convertByChunk(dv, 8, dataView => dataView.getBigInt64(0, le).toString()),
+  },
+  {
+    label: "float32",
+    minBytes: 4,
+    convert: (dv, le) => convertByChunk(dv, 4, dataView => dataView.getFloat32(0, le).toString()),
+  },
+
+  {
+    label: "float64",
+    minBytes: 8,
+    convert: (dv, le) => convertByChunk(dv, 8, dataView => dataView.getFloat64(0, le).toString()),
+  },
   // {
   //   label: "uint24",
   //   minBytes: 3,
@@ -146,29 +177,6 @@ const inspectTypesBuilder: IInspectableType[] = [
   //     return String(isNegative ? -(0xffffff - uint + 1) : uint);
   //   },
   // },
-  {
-    label: "uint32",
-    minBytes: 4,
-    convert: (dv, le) => convertByChunk(dv, 4, dataView => dataView.getUint32(0, le).toString()),
-  },
-
-  {
-    label: "int32",
-    minBytes: 4,
-    convert: (dv, le) => convertByChunk(dv, 4, dataView => dataView.getInt32(0, le).toString()),
-  },
-
-  {
-    label: "uint64",
-    minBytes: 8,
-    convert: (dv, le) => convertByChunk(dv, 8, dataView => dataView.getBigUint64(0, le).toString()),
-  },
-
-  {
-    label: "int64",
-    minBytes: 8,
-    convert: (dv, le) => convertByChunk(dv, 8, dataView => dataView.getBigInt64(0, le).toString()),
-  },
 
   // {
   //   label: "ULEB128",
@@ -195,18 +203,6 @@ const inspectTypesBuilder: IInspectableType[] = [
   //   convert: (dv, le) =>
   //     convertByChunk(dv, 2, dataView => getFloat16(8, 7)(dataView.buffer, le).toString()),
   // },
-
-  {
-    label: "float32",
-    minBytes: 4,
-    convert: (dv, le) => convertByChunk(dv, 4, dataView => dataView.getFloat32(0, le).toString()),
-  },
-
-  {
-    label: "float64",
-    minBytes: 8,
-    convert: (dv, le) => convertByChunk(dv, 8, dataView => dataView.getFloat64(0, le).toString()),
-  },
 
   // { label: "uint32", minBytes: 4, convert: (dv, le) => dv.getUint32(0, le).toString() },
   // { label: "int32", minBytes: 4, convert: (dv, le) => dv.getInt32(0, le).toString() },
@@ -258,6 +254,56 @@ addTextDecoder("utf-16", 2);
 // addTextDecoder("shift-jis", 2);
 
 export const inspectableTypes: readonly IInspectableType[] = inspectTypesBuilder;
+
+export interface IFormat {
+  label: string;
+  minBytes: number;
+  useNumber: number;
+  subStructures?: IFormat[];
+}
+
+export class FormatManager {
+  private formats: IFormat[];
+
+  constructor() {
+    this.formats = [];
+    this.initDefaultFormats();
+  }
+
+  private initDefaultFormats() {
+    this.formats = inspectableTypes.map(format => ({
+      label: format.label,
+      minBytes: format.minBytes,
+      useNumber: 0,
+    }));
+    this.formats.push({ label: "raw", minBytes: 1, useNumber: 1 });
+  }
+
+  // Add a new format
+  addFormat(format: IFormat) {
+    this.formats.push(format);
+  }
+
+  // Get all formats
+  getFormats(): ReadonlyArray<IFormat> {
+    return this.formats;
+  }
+
+  // Get format by label
+  getFormatByLabel(label: string): IFormat | undefined {
+    return this.formats.find(format => format.label === label);
+  }
+
+  // Update format by label
+  updateFormatByLabel(label: string, updatedFormat: Partial<IFormat>): void {
+    const index = this.formats.findIndex(format => format.label === label);
+    if (index !== -1) {
+      this.formats[index] = { ...this.formats[index], ...updatedFormat };
+    }
+  }
+}
+
+export const formatManager = new FormatManager();
 
 // 按照 minBytes 进行分段处理，并依次转换为字符串
 const convertByChunk = (
