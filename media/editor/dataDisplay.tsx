@@ -495,7 +495,6 @@ const generateRows = (props: IDataPageProps, data: Uint8Array) => {
       splitList.push(props.columnWidth);
       let offsetInRaw = 0;
       splitList.forEach((splitPoint, index) => {
-        rows.push(<hr />);
         if (splitPoint > 0) {
           // // 计算当前子行的偏移量
           // const startOffset = i - props.pageStart + offsetInRaw;

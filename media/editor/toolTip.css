@@ -33,5 +33,9 @@
 }
 
 .item:hover {
+  background: #555;
+}
+
+.item:selected {
   background: #444;
 }

@@ -17,8 +17,8 @@ export const ToolTip: React.FC<TooltipProps> = ({ isVisible, text, position }) =
         <div
           className={style.toolTip}
           style={{
-            left: position.left,
-            top: position.top,
+            left: position.left + 10,
+            top: position.top + 10,
           }}
         >
           {text}
@@ -50,22 +50,13 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   const [subMenuIndex, setSubMenuIndex] = useState<number | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const handleItemClick = (onClick: () => void) => {
-    onClick();
-    onClose();
-  };
-
-  const handleSubMenuClick = (index: number) => {
-    setSubMenuIndex(index === subMenuIndex ? null : index);
-  };
-
-  const handleClickOutside = (event: MouseEvent) => {
-    if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-      onClose();
-    }
-  };
-
   useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
     if (isVisible) {
       document.addEventListener("mousedown", handleClickOutside);
     } else {
@@ -75,7 +66,27 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isVisible]);
+  }, [isVisible, onClose]);
+
+  useEffect(() => {
+    if (isVisible && menuRef.current) {
+      const rect = menuRef.current.getBoundingClientRect();
+      const bottomSpace = window.innerHeight - rect.bottom;
+
+      if (bottomSpace < 0) {
+        menuRef.current.style.top = `${position.top + bottomSpace}px`;
+      }
+    }
+  }, [isVisible, position]);
+
+  const handleItemClick = (onClick: () => void) => {
+    onClick();
+    onClose();
+  };
+
+  const handleSubMenuClick = (index: number) => {
+    setSubMenuIndex(index === subMenuIndex ? null : index);
+  };
 
   return (
     <>

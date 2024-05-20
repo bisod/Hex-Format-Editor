@@ -271,12 +271,14 @@ export class FormatManager {
   }
 
   private initDefaultFormats() {
-    this.formats = inspectableTypes.map(format => ({
-      label: format.label,
-      minBytes: format.minBytes,
-      useNumber: 0,
-    }));
     this.formats.push({ label: "raw", minBytes: 1, useNumber: 1 });
+    this.formats.push(
+      ...inspectableTypes.map(format => ({
+        label: format.label,
+        minBytes: format.minBytes,
+        useNumber: 0,
+      })),
+    );
   }
 
   // Add a new format

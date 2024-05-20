@@ -51,9 +51,9 @@ export class Segment {
   }
   toIFormat(): IFormat {
     const iFormat: IFormat = {
-      label: this.name,
+      label: this.displayFormat,
       minBytes: this.length,
-      useNumber: 0,
+      useNumber: 1,
       subStructures: this.subSegments.map(subSegment => subSegment.toIFormat()),
     };
     return iFormat;
@@ -184,41 +184,43 @@ export const SegmentItem: React.FC<{
         });
       }
 
-      // 添加划分格式选项
-      const formatSplit = formatManager
-        .getFormats()
-        .filter(type => segment.length >= type.minBytes && 0 === segment.length % type.minBytes)
-        .map(type => ({
-          label: `${type.label}(${type.minBytes}B/段)`,
-          onClick: () => {
-            console.log("onclick");
-            splitSegmentByFormat(indices, type.label, type.minBytes);
-          },
-        }));
-      if (formatSplit.length > 0) {
-        newitems.push({
-          label: "批量分隔当前分段",
-          onClick: () => {},
-          subItems: formatSplit,
-        });
-      }
+      if (segment.displayFormat === "raw") {
+        // 添加划分格式选项
+        const formatSplit = formatManager
+          .getFormats()
+          .filter(type => segment.length >= type.minBytes && 0 === segment.length % type.minBytes)
+          .map(type => ({
+            label: `${type.label}(${type.minBytes}B/段)`,
+            onClick: () => {
+              console.log("onclick");
+              splitSegmentByFormat(indices, type.label, type.minBytes);
+            },
+          }));
+        if (formatSplit.length > 0) {
+          newitems.push({
+            label: "批量分隔当前分段",
+            onClick: () => {},
+            subItems: formatSplit,
+          });
+        }
 
-      // 添加划分格式选项
-      const formatCreate = formatManager
-        .getFormats()
-        .filter(type => segment.length >= type.minBytes && 0 === segment.length % type.minBytes)
-        .map(type => ({
-          label: `${type.label}(${type.minBytes}B/段)`,
-          onClick: () => {
-            segment.createSubSegmentByFormat(type.label, type.minBytes);
-          },
-        }));
-      if (formatCreate.length > 0) {
-        newitems.push({
-          label: "批量创建子分段",
-          onClick: () => {},
-          subItems: formatCreate,
-        });
+        // 添加划分格式选项
+        const formatCreate = formatManager
+          .getFormats()
+          .filter(type => segment.length >= type.minBytes && 0 === segment.length % type.minBytes)
+          .map(type => ({
+            label: `${type.label}(${type.minBytes}B/段)`,
+            onClick: () => {
+              segment.createSubSegmentByFormat(type.label, type.minBytes);
+            },
+          }));
+        if (formatCreate.length > 0) {
+          newitems.push({
+            label: "批量创建子分段",
+            onClick: () => {},
+            subItems: formatCreate,
+          });
+        }
       }
     }
     e.preventDefault();
