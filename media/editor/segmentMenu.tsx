@@ -64,6 +64,31 @@ export class Segment {
   addSubSegments(subSegments: Segment[]) {
     this.subSegments.push(...subSegments);
   }
+
+  splitSegmentByFormat(format: string, splitLength: number) {
+    if (this.subSegments.length > 0) {
+      showWarningMessage(`已经拥有分段格式，不可划分，请清除分段后再尝试`);
+      return;
+    }
+
+    // 检查当前分段长度是否符合拆分要求
+    if (this.length % splitLength !== 0) {
+      showWarningMessage(`段长 (${this.length}) 无法整除数据格式长度 (${splitLength})`);
+      return;
+    }
+
+    // 计算拆分后的子分段数量
+    const numSegments = this.length / splitLength;
+
+    // 根据拆分后的数量创建子分段
+    for (let i = 0; i < numSegments; i++) {
+      const start = this.start + i * splitLength;
+      const end = start + splitLength - 1;
+      const subSegmentName = `${this.name}_${format}_${i + 1}`;
+      const subSegment = new Segment(subSegmentName, start, end, format);
+      this.subSegments.push(subSegment);
+    }
+  }
 }
 
 export const SegmentItem: React.FC<{
@@ -100,6 +125,12 @@ export const SegmentItem: React.FC<{
       e.clientY - 10,
     );
   };
+  const handleMouseLeave = () => {
+    // 延迟隐藏 ToolTip
+    setTimeout(() => {
+      hideToolTip();
+    }, 100);
+  };
 
   const handleContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
     const newitems: MenuItem[] = [];
@@ -123,21 +154,41 @@ export const SegmentItem: React.FC<{
     if (!isLastSegment) {
       newitems.push({ label: "向下合并", onClick: () => handleMergeDown() });
     }
-    // 添加规定格式选项
-    const formatOptions = inspectableTypes
-      .filter(type => segment.length >= type.minBytes && 0 === segment.length % type.minBytes)
-      .map(type => ({
-        label: type.label,
-        onClick: () => {
-          segment.setDisplayFormat(type.label);
-        },
-      }));
-    if (formatOptions.length > 0) {
-      newitems.push({
-        label: "规定格式",
-        onClick: () => {},
-        subItems: formatOptions,
-      });
+
+    if (segment.subSegments.length === 0) {
+      // 添加规定格式选项
+      const formatOptions = inspectableTypes
+        .filter(type => segment.length >= type.minBytes && 0 === segment.length % type.minBytes)
+        .map(type => ({
+          label: type.label,
+          onClick: () => {
+            segment.setDisplayFormat(type.label);
+          },
+        }));
+      if (formatOptions.length > 0) {
+        newitems.push({
+          label: "规定格式",
+          onClick: () => {},
+          subItems: formatOptions,
+        });
+      }
+
+      // 添加划分格式选项
+      const formatSplit = inspectableTypes
+        .filter(type => segment.length >= type.minBytes && 0 === segment.length % type.minBytes)
+        .map(type => ({
+          label: `${type.label}(${type.minBytes}B/段)`,
+          onClick: () => {
+            segment.splitSegmentByFormat(type.label, type.minBytes);
+          },
+        }));
+      if (formatSplit.length > 0) {
+        newitems.push({
+          label: "批量划分格式",
+          onClick: () => {},
+          subItems: formatSplit,
+        });
+      }
     }
     e.preventDefault();
     openContextMenu(newitems, e.clientX, e.clientY);
@@ -203,11 +254,18 @@ export const SegmentItem: React.FC<{
         className={`${style.segment} ${selectedIndices.join(",") === indices.join(",") ? style.selected : ""}`}
         onClick={handleItemClick} // 修改点击事件处理函数
         style={{ marginLeft: `${(indices.length - 1) * 20}px` }} // 根据索引序列缩进
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={hideToolTip}
         onContextMenu={handleContextMenu}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            // backgroundColor: "#9d1414",
+          }}
+        >
           {segment.subSegments.length > 0 ? (
             <div onClick={toggleSubSegments} style={{ marginRight: "4px" }}>
               {isSubSegmentsExpanded ? <TriangleDown /> : <TriangleRight />}

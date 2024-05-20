@@ -252,10 +252,10 @@ const addTextDecoder = (encoding: string, minBytes: number) => {
 addTextDecoder("ascii", 1);
 addTextDecoder("utf-8", 1);
 addTextDecoder("utf-16", 2);
-addTextDecoder("gb18030", 2);
-addTextDecoder("big5", 2);
-addTextDecoder("iso-2022-kr", 2);
-addTextDecoder("shift-jis", 2);
+// addTextDecoder("gb18030", 2);
+// addTextDecoder("big5", 2);
+// addTextDecoder("iso-2022-kr", 2);
+// addTextDecoder("shift-jis", 2);
 
 export const inspectableTypes: readonly IInspectableType[] = inspectTypesBuilder;
 
