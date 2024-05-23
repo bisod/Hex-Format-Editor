@@ -426,55 +426,66 @@ const LoadingDataRows: React.FC<IDataPageProps> = props => (
   </>
 );
 
+// // 获取默认字节序的状态值
+// const defaultEndianness = useRecoilValue(select.editorSettings).defaultEndianness;
+// // 获取和设置字节序的状态钩子
+// const [endianness, setEndianness] = usePersistedState("endianness", defaultEndianness);
+// 如果当前行在最底层分段的范围内，则将其加入结果列表
+// // 获取待查看的文件字节信息
+// const target = useFileBytes(segmentStart, segment.length);
+// // 创建 DataView 实例来处理字节数据
+// const dv = new DataView(target.buffer);
+// // 判断字节序是否为小端序
+// const le = endianness === Endianness.Little;
+// display:
+//   segment.displayFormat === "raw"
+//     ? undefined
+//     : getFormatByLabel(segment.displayFormat)?.convert(dv, le),
+
 interface IRawSlice {
   location: number;
   format: string;
   length: number;
+  isdisplay: boolean;
   // display: string | undefined;
 }
 
 const DataPageContents: React.FC<IDataPageProps> = props => {
   const pageSelector = select.editedDataPages(props.pageNo);
   const [data] = useLastAsyncRecoilValue(pageSelector);
-  // // 获取默认字节序的状态值
-  // const defaultEndianness = useRecoilValue(select.editorSettings).defaultEndianness;
-  // // 获取和设置字节序的状态钩子
-  // const [endianness, setEndianness] = usePersistedState("endianness", defaultEndianness);
 
   const getRawSlices = (rawOffset: number, rawWidth: number, segmentsMenu: Segment[]) => {
     const result: IRawSlice[] = [];
+    let prevFormat: string = "";
 
     const findBottomSegments = (segments: Segment[]) => {
       segments.forEach(segment => {
+        const segmentStart = segment.start;
+        if (rawOffset + rawWidth <= segmentStart) return;
         if (segment.subSegments.length === 0) {
           // 如果当前分段没有子分段，则是最底层分段
-          const segmentStart = segment.start;
+
+          const segmentEnd = segment.end + 1;
           if (rawOffset <= segmentStart && rawOffset + rawWidth > segmentStart) {
-            // 如果当前行在最底层分段的范围内，则将其加入结果列表
-            // // 获取待查看的文件字节信息
-            // const target = useFileBytes(segmentStart, segment.length);
-            // // 创建 DataView 实例来处理字节数据
-            // const dv = new DataView(target.buffer);
-            // // 判断字节序是否为小端序
-            // const le = endianness === Endianness.Little;
             const slice: IRawSlice = {
               location: segmentStart - rawOffset,
               format: segment.displayFormat,
               length: segment.length,
-              // display:
-              //   segment.displayFormat === "raw"
-              //     ? undefined
-              //     : getFormatByLabel(segment.displayFormat)?.convert(dv, le),
+              isdisplay: true,
             };
             if (result.length === 0 && slice.location !== 0) {
               const firstSlice: IRawSlice = {
                 location: 0,
-                format: "first",
+                format: prevFormat,
                 length: segmentStart - rawOffset,
+                isdisplay: prevFormat === "raw" ? true : false,
               };
+              // console.log(`isdisplay: prevFormat === ${prevFormat}"raw" ? ${prevFormat === "raw"}`);
               result.push(firstSlice);
             }
             result.push(slice);
+          } else if (rawOffset < segmentEnd && rawOffset > segmentStart) {
+            prevFormat = segment.displayFormat;
           }
         } else {
           // 如果当前分段有子分段，则递归查找最底层分段
@@ -484,6 +495,15 @@ const DataPageContents: React.FC<IDataPageProps> = props => {
     };
 
     findBottomSegments(segmentsMenu);
+    if (result.length === 0) {
+      const AllLine: IRawSlice = {
+        location: 0,
+        format: prevFormat,
+        length: rawWidth,
+        isdisplay: prevFormat === "raw" ? true : false,
+      };
+      result.push(AllLine);
+    }
     return result;
   };
 
@@ -492,47 +512,10 @@ const DataPageContents: React.FC<IDataPageProps> = props => {
     let row = (props.rowsStart - props.pageStart) / props.columnWidth;
     for (let i = props.rowsStart; i < props.rowsEnd && i < props.fileSize; i += props.columnWidth) {
       const splitList = getRawSlices(i, props.columnWidth, props.segmentMenu);
-      if (splitList.length) {
-        // splitList.push({
-        //   location: props.columnWidth,
-        //   format: "last",
-        //   length: 0,
-        //   // display: undefined,
-        // });
-        // let offsetInRaw = 0;
-        splitList.forEach((splitPoint, index) => {
-          // if (splitPoint.location < 16) {
-          // const splitEnd = Math.min(splitPoint.location + splitPoint.length,props.columnWidth)
-          rows.push(
-            <div
-              key={`${i}_${index}`} // 使用组合键确保唯一性
-              className={style.dataRow}
-              style={{ top: `${row++ * props.dimensions.rowPxHeight}px` }}
-            >
-              <DataCellGroup>
-                <Address>{i.toString(16).padStart(8, "0")}</Address>
-              </DataCellGroup>
-              <DataRowContents
-                offset={i}
-                rawBytes={data.subarray(
-                  i - props.pageStart,
-                  i -
-                    props.pageStart +
-                    Math.min(splitPoint.location + splitPoint.length, props.columnWidth),
-                )}
-                width={props.columnWidth}
-                showDecodedText={props.showDecodedText}
-                offsetInRaw={splitPoint.location}
-              />
-            </div>,
-          );
-          // offsetInRaw = splitPoint.location; // 更新下一个子行的起始位置
-        });
-      } else {
-        // 如果没有分段，则按照原来的逻辑渲染单行内容
+      splitList.forEach((splitPoint, index) => {
         rows.push(
           <div
-            key={i}
+            key={`${i}_${index}`} // 使用组合键确保唯一性
             className={style.dataRow}
             style={{ top: `${row++ * props.dimensions.rowPxHeight}px` }}
           >
@@ -541,14 +524,17 @@ const DataPageContents: React.FC<IDataPageProps> = props => {
             </DataCellGroup>
             <DataRowContents
               offset={i}
-              rawBytes={data.subarray(i - props.pageStart, i - props.pageStart + props.columnWidth)}
+              rawBytes={data.subarray(
+                i - props.pageStart,
+                i - props.pageStart + splitPoint.location + splitPoint.length,
+              )}
               width={props.columnWidth}
               showDecodedText={props.showDecodedText}
-              offsetInRaw={0}
+              rawSlice={splitPoint}
             />
           </div>,
         );
-      }
+      });
     }
 
     return rows;
@@ -757,8 +743,11 @@ const DataRowContents: React.FC<{
   width: number;
   showDecodedText: boolean;
   rawBytes: Uint8Array;
-  offsetInRaw: number;
-}> = ({ offset, width, showDecodedText, rawBytes, offsetInRaw }) => {
+  rawSlice: IRawSlice;
+}> = ({ offset, width, showDecodedText, rawBytes, rawSlice }) => {
+  // if (!rawSlice.isdisplay) {
+  //   console.log(`第${offset.toString(16).padStart(8, "0").toUpperCase()}行，不显示`);
+  // }
   let memoValue = "";
   for (const byte of rawBytes) {
     memoValue += "," + byte;
@@ -772,7 +761,7 @@ const DataRowContents: React.FC<{
       const boffset = offset + i;
       const value = rawBytes[i];
 
-      if (i < offsetInRaw) {
+      if (i < rawSlice.location) {
         bytes.push(<DataCell key={i} byte={boffset} isChar={false} value={value}></DataCell>);
         if (showDecodedText) {
           const char = getAsciiCharacter(value);
@@ -803,63 +792,38 @@ const DataRowContents: React.FC<{
 
       if (showDecodedText) {
         const char = getAsciiCharacter(value);
-        chars.push(
-          <DataCell
-            key={i}
-            byte={boffset}
-            isChar={true}
-            className={char === undefined ? style.nonGraphicChar : undefined}
-            value={value}
-          >
-            {char === undefined ? "." : char}
-          </DataCell>,
-        );
+        if (!rawSlice.isdisplay) {
+          chars.push(
+            <DataCell
+              key={i}
+              byte={boffset}
+              isChar={true}
+              className={char === undefined ? style.nonGraphicChar : undefined}
+              value={value}
+            ></DataCell>,
+          );
+        } else {
+          chars.push(
+            <DataCell
+              key={i}
+              byte={boffset}
+              isChar={true}
+              className={char === undefined ? style.nonGraphicChar : undefined}
+              value={value}
+            >
+              {char === undefined ? "." : char}
+            </DataCell>,
+          );
+        }
       }
     }
-
-    // for (let i = 0; i < offsetInRaw; i++) {
-    //   bytes.push(<EmptyDataCell key={i} />);
-    //   chars.push(<EmptyDataCell key={i} />);
-    // }
-
-    // for (let i = 0; i < width; i++) {
-    //   const boffset = offset + i;
-    //   const value = rawBytes[i];
-
-    //   if (value === undefined) {
-    //     bytes.push(<EmptyDataCell key={i + offsetInRaw} />);
-    //     chars.push(<EmptyDataCell key={i + offsetInRaw} />);
-    //     continue;
-    //   }
-
-    //   bytes.push(
-    //     <DataCell key={i + offsetInRaw} byte={boffset} isChar={false} value={value}>
-    //       {value.toString(16).padStart(2, "0").toUpperCase()}
-    //     </DataCell>,
-    //   );
-
-    //   if (showDecodedText) {
-    //     const char = getAsciiCharacter(value);
-    //     chars.push(
-    //       <DataCell
-    //         key={i + offsetInRaw}
-    //         byte={boffset}
-    //         isChar={true}
-    //         className={char === undefined ? style.nonGraphicChar : undefined}
-    //         value={value}
-    //       >
-    //         {char === undefined ? "." : char}
-    //       </DataCell>,
-    //     );
-    //   }
-    // }
     return { bytes, chars };
-  }, [memoValue, showDecodedText]);
+  }, [memoValue, showDecodedText, rawSlice]);
 
   return (
     <>
       <DataCellGroup>{bytes}</DataCellGroup>
-      <DataCellGroup>{chars}</DataCellGroup>
+      <DataCellGroup>{rawSlice.format === "raw" ? chars : ""}</DataCellGroup>
     </>
   );
 };
