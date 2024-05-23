@@ -74,7 +74,7 @@ const Editor: React.FC = () => {
   // const [editSegment, setEditSegment] = useState<Segment | null>(null); // 控制是否显示编辑组件
   const [tooltipProps, setTooltipProps] = useState<TooltipProps>({
     isVisible: false,
-    text: "",
+    text: [],
     position: { left: 0, top: 0 },
   });
 
@@ -85,13 +85,13 @@ const Editor: React.FC = () => {
     position: { left: 0, top: 0 },
   });
 
-  const showToolTip = (showText: string, mouseX: number, mouseY: number) => {
+  const showToolTip = (showText: string[], mouseX: number, mouseY: number) => {
     const mousePosition = { left: mouseX, top: mouseY };
     setTooltipProps({ isVisible: true, text: showText, position: mousePosition });
   };
 
   const hideToolTip = () => {
-    setTooltipProps({ isVisible: false, text: "", position: { left: 0, top: 0 } });
+    setTooltipProps({ isVisible: false, text: [], position: { left: 0, top: 0 } });
   };
 
   const openContextMenu = (myitems: MenuItem[], mouseX: number, mouseY: number) => {

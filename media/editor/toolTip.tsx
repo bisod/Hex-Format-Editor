@@ -6,7 +6,7 @@ const style = throwOnUndefinedAccessInDev(_style);
 
 export interface TooltipProps {
   isVisible: boolean;
-  text: string;
+  text: string[];
   position: { left: number; top: number };
 }
 
@@ -21,7 +21,12 @@ export const ToolTip: React.FC<TooltipProps> = ({ isVisible, text, position }) =
             top: position.top + 10,
           }}
         >
-          {text}
+          {text.map((line, index) => (
+            <React.Fragment key={index}>
+              <p>{line}</p>
+              {index === 0 && text.length > 1 && <hr />}
+            </React.Fragment>
+          ))}
         </div>
       )}
     </>
@@ -95,8 +100,8 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           ref={menuRef}
           className={style.contextMenu}
           style={{
-            left: position.left,
-            top: position.top,
+            left: position.left + 10,
+            top: position.top + 10,
           }}
         >
           {items.map((item, index) => (
