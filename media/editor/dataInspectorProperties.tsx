@@ -82,7 +82,7 @@ export interface IInspectableType {
   convert(dv: DataView, littleEndian: boolean): string;
 }
 
-const inspectTypesBuilder: IInspectableType[] = [
+const baseTypes: IInspectableType[] = [
   {
     label: "binary",
     minBytes: 1,
@@ -146,87 +146,9 @@ const inspectTypesBuilder: IInspectableType[] = [
     minBytes: 8,
     convert: (dv, le) => convertByChunk(dv, 8, dataView => dataView.getFloat64(0, le).toString()),
   },
-  // {
-  //   label: "uint24",
-  //   minBytes: 3,
-  //   convert: (dv, le) =>
-  //     convertByChunk(dv, 3, dataView => getUint24(dataView.buffer, le).toString()),
-  // },
-
-  // { label: "uint16", minBytes: 2, convert: (dv, le) => dv.getUint16(0, le).toString() },
-  // { label: "int16", minBytes: 2, convert: (dv, le) => dv.getInt16(0, le).toString() },
-
-  // { label: "uint24", minBytes: 3, convert: (dv, le) => getUint24(dv.buffer, le).toString() },
-
-  // {
-  //   label: "int24",
-  //   minBytes: 3,
-  //   convert: (dv, le) =>
-  //     convertByChunk(dv, 3, dataView => {
-  //       const uint = getUint24(dataView.buffer, le);
-  //       const isNegative = !!(uint & 0x800000);
-  //       return String(isNegative ? -(0xffffff - uint + 1) : uint);
-  //     }),
-  // },
-  // {
-  //   label: "int24",
-  //   minBytes: 3,
-  //   convert: (dv, le) => {
-  //     const uint = getUint24(dv.buffer, le);
-  //     const isNegative = !!(uint & 0x800000);
-  //     return String(isNegative ? -(0xffffff - uint + 1) : uint);
-  //   },
-  // },
-
-  // {
-  //   label: "ULEB128",
-  //   minBytes: 1,
-  //   convert: dv => convertByChunk(dv, 1, dataView => getULEB128(dataView.buffer).toString()),
-  // },
-
-  // {
-  //   label: "SLEB128",
-  //   minBytes: 1,
-  //   convert: dv => convertByChunk(dv, 1, dataView => getSLEB128(dataView.buffer).toString()),
-  // },
-
-  // {
-  //   label: "float16",
-  //   minBytes: 2,
-  //   convert: (dv, le) =>
-  //     convertByChunk(dv, 2, dataView => getFloat16(5, 10)(dataView.buffer, le).toString()),
-  // },
-
-  // {
-  //   label: "bfloat16",
-  //   minBytes: 2,
-  //   convert: (dv, le) =>
-  //     convertByChunk(dv, 2, dataView => getFloat16(8, 7)(dataView.buffer, le).toString()),
-  // },
-
-  // { label: "uint32", minBytes: 4, convert: (dv, le) => dv.getUint32(0, le).toString() },
-  // { label: "int32", minBytes: 4, convert: (dv, le) => dv.getInt32(0, le).toString() },
-
-  // { label: "uint64", minBytes: 8, convert: (dv, le) => dv.getBigUint64(0, le).toString() },
-  // { label: "int64", minBytes: 8, convert: (dv, le) => dv.getBigInt64(0, le).toString() },
-
-  // { label: "ULEB128", minBytes: 1, convert: dv => getULEB128(dv.buffer).toString() },
-  // { label: "SLEB128", minBytes: 1, convert: dv => getSLEB128(dv.buffer).toString() },
-
-  // {
-  //   label: "float16",
-  //   minBytes: 2,
-  //   convert: (dv, le) => getFloat16(5, 10)(dv.buffer, le).toString(),
-  // },
-  // {
-  //   label: "bfloat16",
-  //   minBytes: 2,
-  //   convert: (dv, le) => getFloat16(8, 7)(dv.buffer, le).toString(),
-  // },
-
-  // { label: "float32", minBytes: 4, convert: (dv, le) => dv.getFloat32(0, le).toString() },
-  // { label: "float64", minBytes: 8, convert: (dv, le) => dv.getFloat64(0, le).toString() },
 ];
+
+const inspectTypesBuilder: IInspectableType[] = [...baseTypes];
 
 const addTextDecoder = (encoding: string, minBytes: number) => {
   try {
@@ -263,46 +185,71 @@ export interface IFormat {
 }
 
 export class FormatManager {
-  private formats: IFormat[];
+  private baseformats: IFormat[];
+  private specialFormats: IFormat[];
+  private userFormats: IFormat[];
+  private textFormats: IFormat[];
 
   constructor() {
-    this.formats = [];
+    this.baseformats = [];
+    this.specialFormats = [];
+    this.userFormats = [];
+    this.textFormats = [];
     this.initDefaultFormats();
   }
 
   private initDefaultFormats() {
-    this.formats.push({ label: "raw", minBytes: 1, useNumber: 1 });
-    this.formats.push(
-      ...inspectableTypes.map(format => ({
+    this.specialFormats.push(
+      { label: "raw", minBytes: 1, useNumber: 1 },
+      { label: "undefStruct", minBytes: 1, useNumber: 0 },
+    );
+    // this.specialFormats.push();
+    this.baseformats.push(
+      ...baseTypes.map(format => ({
         label: format.label,
         minBytes: format.minBytes,
         useNumber: 0,
       })),
     );
+
+    this.textFormats.push(
+      { label: "ASCII", minBytes: 1, useNumber: 0 },
+      { label: "UTF-8", minBytes: 1, useNumber: 0 },
+      { label: "UTF-16", minBytes: 1, useNumber: 0 },
+    );
   }
 
   // Add a new format
   addFormat(format: IFormat) {
-    this.formats.push(format);
+    this.userFormats.push(format);
   }
 
   // Get all formats
-  getFormats(): ReadonlyArray<IFormat> {
-    return this.formats;
+  getBaseFormats(): ReadonlyArray<IFormat> {
+    return this.baseformats;
   }
 
-  // Get format by label
-  getFormatByLabel(label: string): IFormat | undefined {
-    return this.formats.find(format => format.label === label);
+  getTextFormats(): ReadonlyArray<IFormat> {
+    return this.textFormats;
   }
 
-  // Update format by label
-  updateFormatByLabel(label: string, updatedFormat: Partial<IFormat>): void {
-    const index = this.formats.findIndex(format => format.label === label);
-    if (index !== -1) {
-      this.formats[index] = { ...this.formats[index], ...updatedFormat };
-    }
+  getAllFormats(): ReadonlyArray<IFormat> {
+    const allFormats = [...this.baseformats, ...this.specialFormats, ...this.userFormats];
+    return allFormats;
   }
+
+  // // Get format by label
+  // getFormatByLabel(label: string): IFormat | undefined {
+  //   return this.formats.find(format => format.label === label);
+  // }
+
+  // // Update format by label
+  // updateFormatByLabel(label: string, updatedFormat: Partial<IFormat>): void {
+  //   const index = this.formats.findIndex(format => format.label === label);
+  //   if (index !== -1) {
+  //     this.formats[index] = { ...this.formats[index], ...updatedFormat };
+  //   }
+  // }
 }
 
 export const formatManager = new FormatManager();

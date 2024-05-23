@@ -192,7 +192,7 @@ export const SegmentItem: React.FC<{
         if (segment.subSegments.length === 0) {
           // 添加规定格式选项
           const formatOptions = formatManager
-            .getFormats()
+            .getBaseFormats()
             .filter(type => segment.length >= type.minBytes && 0 === segment.length % type.minBytes)
             .map(type => ({
               label:
@@ -205,6 +205,13 @@ export const SegmentItem: React.FC<{
                   : segment.setDisplayFormat(type.label);
               },
             }));
+          formatOptions.push(
+            ...formatManager.getTextFormats().map(type => ({
+              label: type.label,
+              onClick: () => segment.setDisplayFormat(type.label),
+            })),
+          );
+
           if (formatOptions.length > 0) {
             newitems.push({
               label: "设置显示格式",
@@ -214,7 +221,7 @@ export const SegmentItem: React.FC<{
           }
           // 不具备子结构的单元格式
           const formatSplit = formatManager
-            .getFormats()
+            .getBaseFormats()
             .filter(type => segment.length > type.minBytes && 0 === segment.length % type.minBytes)
             .map(type => ({
               label: `${type.label}(${type.minBytes}B/段 共${segment.length / type.minBytes}段)`,
@@ -262,7 +269,6 @@ export const SegmentItem: React.FC<{
   };
 
   const handleItemClick = () => {
-    console.log(`[${indices}]`);
     onClick(indices); // 点击当前分段时更新选中分段索引序列
   };
 
@@ -416,7 +422,6 @@ export const SegmentMenu: React.FC<{
 
       // 查找当前选中内容在哪个现有分段中
       const segmentIndices = findSegmentIndices(selectedRange.start, selectedRange.end, menuItems);
-      console.log(segmentIndices);
 
       // 如果选中内容在一个现有分段中
       if (segmentIndices.length) {
@@ -513,7 +518,7 @@ export const SegmentMenu: React.FC<{
       const segmentIndex = segmentIndices[0];
       // 如果分段索引超出了原分段列表的范围，则直接返回原始分段列表
       if (segmentIndex < 0 || segmentIndex >= segments.length) {
-        console.error("分段索引超出范围");
+        showWarningMessage("分段索引超出范围");
         return segments;
       }
       // 创建新的分段列表
@@ -529,7 +534,7 @@ export const SegmentMenu: React.FC<{
 
       // 如果父分段不存在或子分段索引超出范围，则直接返回原始分段列表
       if (!parentSegment || segmentIndex < 0 || segmentIndex >= parentSegment.subSegments.length) {
-        console.error("分段索引超出范围");
+        showWarningMessage("分段索引超出范围");
         return segments;
       }
 
@@ -760,7 +765,6 @@ export const SegmentMenu: React.FC<{
     }
 
     const numSegments = currentSegment.length / splitLength;
-    // console.log(`目标长度：${numSegments}`);
     const newHandleSegments: Segment[] = [];
     // 根据拆分后的数量创建子分段
     for (let i = 0; i < numSegments; i++) {
