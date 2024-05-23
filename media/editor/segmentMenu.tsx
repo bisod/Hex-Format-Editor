@@ -188,6 +188,38 @@ export const SegmentItem: React.FC<{
           label: "清除格式",
           onClick: () => segment.clearDisplayFormat(),
         });
+
+        if (segment.subSegments.length === 0) {
+          // 添加规定格式选项
+          const formatOptions = formatManager
+            .getBaseFormats()
+            .filter(type => segment.length >= type.minBytes && 0 === segment.length % type.minBytes)
+            .map(type => ({
+              label:
+                segment.length > type.minBytes
+                  ? `${type.label}数组(${type.minBytes}B/段 共${segment.length / type.minBytes}段)`
+                  : type.label,
+              onClick: () => {
+                segment.length > type.minBytes
+                  ? segment.createSubSegmentByFormat(type.label, type.minBytes)
+                  : segment.setDisplayFormat(type.label);
+              },
+            }));
+          formatOptions.push(
+            ...formatManager.getTextFormats().map(type => ({
+              label: type.label,
+              onClick: () => segment.setDisplayFormat(type.label),
+            })),
+          );
+
+          if (formatOptions.length > 0) {
+            newitems.push({
+              label: "修改格式",
+              onClick: () => {},
+              subItems: formatOptions,
+            });
+          }
+        }
       } else {
         // 不具备子结构的单元格式，可以设置格式
         if (segment.subSegments.length === 0) {
