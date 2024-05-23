@@ -1,6 +1,6 @@
 .segment-menu-container {
   width: 250px;
-  height: 680px;
+  height: 85vh;
   background-color: #333;
   color: #fff;
   font-family: var(--vscode-editor-font-family);

@@ -23,6 +23,7 @@ const style = throwOnUndefinedAccessInDev(_style);
 const Root: React.FC = () => {
   // 获取和设置窗口尺寸信息的状态钩子
   const setDimensions = useSetRecoilState(select.dimensions);
+
   // 获取主题样式的自定义钩子
   const theme = useTheme();
 
@@ -31,7 +32,7 @@ const Root: React.FC = () => {
     const applyDimensions = () =>
       setDimensions({
         width: window.innerWidth,
-        height: window.innerHeight,
+        height: window.innerHeight - (parseInt(theme["font-size"]) + 8) * 3,
         rowPxHeight: parseInt(theme["font-size"]) + 8,
       });
 
@@ -43,7 +44,7 @@ const Root: React.FC = () => {
   return (
     <Suspense fallback={<VsProgressIndicator />}>
       {/* 主页面布局 */}
-      <h1 style={{ textAlign: "center" }}>HEX-Format-Editor</h1>
+      <h1 style={{ textAlign: "center", height: "5vh" }}>HEX-Format-Editor</h1>
       <div style={{ display: "flex", height: "100%" }}>
         {/* 右侧编辑器 */}
         <Editor />

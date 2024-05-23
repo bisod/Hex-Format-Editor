@@ -2,6 +2,7 @@ import ListSelection from "@vscode/codicons/src/icons/list-selection.svg";
 import TriangleDown from "@vscode/codicons/src/icons/triangle-down.svg";
 import TriangleRight from "@vscode/codicons/src/icons/triangle-right.svg";
 import React, { useEffect, useState } from "react";
+import { useRecoilState, useRecoilValue } from "recoil";
 import { MessageType } from "../../shared/protocol";
 import { Range } from "../../shared/util/range";
 import { useDisplayContext } from "./dataDisplayContext";
@@ -393,10 +394,25 @@ export const SegmentMenu: React.FC<{
   const ctx = useDisplayContext();
   const [selectedSegmentIndices, setSelectedSegmentIndices] = useState<number[]>([]); // 选中的分段索引序列
   const [nameIndex, setNameIndex] = useState(1);
+  const [offset, setOffset] = useRecoilState(select.offset);
+  const dimensions = useRecoilValue(select.dimensions);
+  const columnWidth = useRecoilValue(select.columnWidth);
 
   const handleMenuItemClick = (indices: number[]) => {
     const segment = getSegmentByIndices(indices);
     ctx.setSelectionRanges([Range.inclusive(segment.start, segment.end)]); // 更新选中的内容
+    if (!select.isByteVisible(dimensions, columnWidth, offset, segment.start)) {
+      console.log("4");
+      setOffset(
+        Math.max(
+          0,
+          select.startOfRowContainingByte(
+            segment.end + 1 - select.getDisplayedBytes(dimensions, columnWidth) / 3,
+            columnWidth,
+          ),
+        ),
+      );
+    }
     setSelectedSegmentIndices(indices); // 更新选中分段的索引序列
   };
 
