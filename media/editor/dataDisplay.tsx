@@ -426,86 +426,83 @@ const LoadingDataRows: React.FC<IDataPageProps> = props => (
   </>
 );
 
-const checkSplit = (rawOffset: number, rawWidth: number, segmentsMenu: Segment[]): number[] => {
-  const result: number[] = [];
+interface IRawSlice {
+  location: number;
+  format: string;
+  length: number;
+  // display: string | undefined;
+}
 
-  const findBottomSegments = (segments: Segment[]) => {
-    segments.forEach(segment => {
-      if (segment.subSegments.length === 0) {
-        // 如果当前分段没有子分段，则是最底层分段
-        const segmentStart = segment.start;
-        if (rawOffset <= segmentStart && rawOffset + rawWidth > segmentStart) {
-          // 如果当前行在最底层分段的范围内，则将其加入结果列表
-          result.push(segmentStart - rawOffset);
+const DataPageContents: React.FC<IDataPageProps> = props => {
+  const pageSelector = select.editedDataPages(props.pageNo);
+  const [data] = useLastAsyncRecoilValue(pageSelector);
+  // // 获取默认字节序的状态值
+  // const defaultEndianness = useRecoilValue(select.editorSettings).defaultEndianness;
+  // // 获取和设置字节序的状态钩子
+  // const [endianness, setEndianness] = usePersistedState("endianness", defaultEndianness);
+
+  const getRawSlices = (rawOffset: number, rawWidth: number, segmentsMenu: Segment[]) => {
+    const result: IRawSlice[] = [];
+
+    const findBottomSegments = (segments: Segment[]) => {
+      segments.forEach(segment => {
+        if (segment.subSegments.length === 0) {
+          // 如果当前分段没有子分段，则是最底层分段
+          const segmentStart = segment.start;
+          if (rawOffset <= segmentStart && rawOffset + rawWidth > segmentStart) {
+            // 如果当前行在最底层分段的范围内，则将其加入结果列表
+            // // 获取待查看的文件字节信息
+            // const target = useFileBytes(segmentStart, segment.length);
+            // // 创建 DataView 实例来处理字节数据
+            // const dv = new DataView(target.buffer);
+            // // 判断字节序是否为小端序
+            // const le = endianness === Endianness.Little;
+            const slice: IRawSlice = {
+              location: segmentStart - rawOffset,
+              format: segment.displayFormat,
+              length: segment.length,
+              // display:
+              //   segment.displayFormat === "raw"
+              //     ? undefined
+              //     : getFormatByLabel(segment.displayFormat)?.convert(dv, le),
+            };
+            if (result.length === 0 && slice.location !== 0) {
+              const firstSlice: IRawSlice = {
+                location: 0,
+                format: "first",
+                length: segmentStart - rawOffset,
+              };
+              result.push(firstSlice);
+            }
+            result.push(slice);
+          }
+        } else {
+          // 如果当前分段有子分段，则递归查找最底层分段
+          findBottomSegments(segment.subSegments);
         }
-      } else {
-        // 如果当前分段有子分段，则递归查找最底层分段
-        findBottomSegments(segment.subSegments);
-      }
-    });
+      });
+    };
+
+    findBottomSegments(segmentsMenu);
+    return result;
   };
 
-  findBottomSegments(segmentsMenu);
-  return result;
-};
-
-// const generateRows = (props: IDataPageProps, data: Uint8Array) => {
-//   const rows: React.ReactNode[] = [];
-//   let row = (props.rowsStart - props.pageStart) / props.columnWidth;
-//   for (let i = props.rowsStart; i < props.rowsEnd && i < props.fileSize; i += props.columnWidth) {
-//     const splitList = checkSplit(i, props.columnWidth, props.segmentMenu);
-//     if (splitList.length) {
-//       console.log(
-//         `offset == ${i} ; splitList == ${splitList} ; rawBytes(${i - props.pageStart}, ${i - props.pageStart + props.columnWidth})`,
-//       );
-//     }
-
-//     rows.push(
-//       <div
-//         key={i}
-//         className={style.dataRow}
-//         style={{ top: `${row++ * props.dimensions.rowPxHeight}px` }}
-//       >
-//         <DataCellGroup>
-//           <Address>{i.toString(16).padStart(8, "0")}</Address>
-//         </DataCellGroup>
-//         <DataRowContents
-//           offset={i}
-//           rawBytes={data.subarray(i - props.pageStart, i - props.pageStart + props.columnWidth)}
-//           width={props.columnWidth}
-//           showDecodedText={props.showDecodedText}
-//         />
-//       </div>,
-//     );
-//   }
-
-//   return rows;
-// };
-
-const generateRows = (props: IDataPageProps, data: Uint8Array) => {
-  const rows: React.ReactNode[] = [];
-  let row = (props.rowsStart - props.pageStart) / props.columnWidth;
-  for (let i = props.rowsStart; i < props.rowsEnd && i < props.fileSize; i += props.columnWidth) {
-    const splitList = checkSplit(i, props.columnWidth, props.segmentMenu);
-    if (splitList.length) {
-      // const ctx = useDisplayContext();
-      // ctx.setSelectionRanges([]); // 更新选中的内容
-      // console.log(`offset == ${i} ; splitList == ${splitList}`);
-      // 如果有分段，则将当前行分成多行进行渲染
-      splitList.push(props.columnWidth);
-      let offsetInRaw = 0;
-      splitList.forEach((splitPoint, index) => {
-        if (splitPoint > 0) {
-          // // 计算当前子行的偏移量
-          // const startOffset = i - props.pageStart + offsetInRaw;
-          // const endOffset = i - props.pageStart + splitPoint;
-          // // 创建起始位置之前的 undefined 数组
-          // const undefinedArray = Array(offsetInRaw).fill(undefined);
-          // // 获取当前子行的内容，拼接在一起
-          // const subRawBytes = Uint8Array.from([
-          //   ...undefinedArray,
-          //   ...data.subarray(startOffset, endOffset),
-          // ]);
+  const generateRows = (props: IDataPageProps, data: Uint8Array) => {
+    const rows: React.ReactNode[] = [];
+    let row = (props.rowsStart - props.pageStart) / props.columnWidth;
+    for (let i = props.rowsStart; i < props.rowsEnd && i < props.fileSize; i += props.columnWidth) {
+      const splitList = getRawSlices(i, props.columnWidth, props.segmentMenu);
+      if (splitList.length) {
+        // splitList.push({
+        //   location: props.columnWidth,
+        //   format: "last",
+        //   length: 0,
+        //   // display: undefined,
+        // });
+        // let offsetInRaw = 0;
+        splitList.forEach((splitPoint, index) => {
+          // if (splitPoint.location < 16) {
+          // const splitEnd = Math.min(splitPoint.location + splitPoint.length,props.columnWidth)
           rows.push(
             <div
               key={`${i}_${index}`} // 使用组合键确保唯一性
@@ -517,85 +514,45 @@ const generateRows = (props: IDataPageProps, data: Uint8Array) => {
               </DataCellGroup>
               <DataRowContents
                 offset={i}
-                // rawBytes={subRawBytes}
-                // rawBytes={data.subarray(
-                //   i - props.pageStart + offsetInRaw,
-                //   i - props.pageStart + splitPoint,
-                // )}
-                rawBytes={data.subarray(i - props.pageStart, i - props.pageStart + splitPoint)}
+                rawBytes={data.subarray(
+                  i - props.pageStart,
+                  i -
+                    props.pageStart +
+                    Math.min(splitPoint.location + splitPoint.length, props.columnWidth),
+                )}
                 width={props.columnWidth}
                 showDecodedText={props.showDecodedText}
-                offsetInRaw={offsetInRaw}
+                offsetInRaw={splitPoint.location}
               />
             </div>,
           );
-          offsetInRaw = splitPoint; // 更新下一个子行的起始位置
-        }
-      });
-      // // 添加最后一个子行
-      // rows.push(<hr />);
-      // // 计算当前子行的偏移量
-      // // const startOffset = i - props.pageStart + offsetInRaw;
-      // // const endOffset = i - props.pageStart + props.columnWidth;
-      // // // 创建起始位置之前的 undefined 数组
-      // // const undefinedArray = Array(offsetInRaw).fill(undefined);
-      // // // 获取当前子行的内容，拼接在一起
-      // // const subRawBytes = Uint8Array.from([
-      // //   ...undefinedArray,
-      // //   ...data.subarray(startOffset, endOffset),
-      // // ]);
-      // rows.push(
-      //   <div
-      //     key={`${i}_last`} // 使用组合键确保唯一性
-      //     className={style.dataRow}
-      //     style={{ top: `${row++ * props.dimensions.rowPxHeight}px` }}
-      //   >
-      //     <DataCellGroup>
-      //       <Address>{i.toString(16).padStart(8, "0")}</Address>
-      //     </DataCellGroup>
-      //     <DataRowContents
-      //       offset={i}
-      //       // rawBytes={subRawBytes}
-      //       // rawBytes={data.subarray(
-      //       //   i - props.pageStart + offsetInRaw,
-      //       //   i - props.pageStart + props.columnWidth,
-      //       // )}
-      //       rawBytes={data.subarray(i - props.pageStart, i - props.pageStart + props.columnWidth)}
-      //       width={props.columnWidth}
-      //       showDecodedText={props.showDecodedText}
-      //       offsetInRaw={offsetInRaw}
-      //     />
-      //   </div>,
-      // );
-    } else {
-      // 如果没有分段，则按照原来的逻辑渲染单行内容
-      rows.push(
-        <div
-          key={i}
-          className={style.dataRow}
-          style={{ top: `${row++ * props.dimensions.rowPxHeight}px` }}
-        >
-          <DataCellGroup>
-            <Address>{i.toString(16).padStart(8, "0")}</Address>
-          </DataCellGroup>
-          <DataRowContents
-            offset={i}
-            rawBytes={data.subarray(i - props.pageStart, i - props.pageStart + props.columnWidth)}
-            width={props.columnWidth}
-            showDecodedText={props.showDecodedText}
-            offsetInRaw={0}
-          />
-        </div>,
-      );
+          // offsetInRaw = splitPoint.location; // 更新下一个子行的起始位置
+        });
+      } else {
+        // 如果没有分段，则按照原来的逻辑渲染单行内容
+        rows.push(
+          <div
+            key={i}
+            className={style.dataRow}
+            style={{ top: `${row++ * props.dimensions.rowPxHeight}px` }}
+          >
+            <DataCellGroup>
+              <Address>{i.toString(16).padStart(8, "0")}</Address>
+            </DataCellGroup>
+            <DataRowContents
+              offset={i}
+              rawBytes={data.subarray(i - props.pageStart, i - props.pageStart + props.columnWidth)}
+              width={props.columnWidth}
+              showDecodedText={props.showDecodedText}
+              offsetInRaw={0}
+            />
+          </div>,
+        );
+      }
     }
-  }
 
-  return rows;
-};
-
-const DataPageContents: React.FC<IDataPageProps> = props => {
-  const pageSelector = select.editedDataPages(props.pageNo);
-  const [data] = useLastAsyncRecoilValue(pageSelector);
+    return rows;
+  };
 
   return <>{generateRows(props, data)}</>;
 };

@@ -402,12 +402,11 @@ export const SegmentMenu: React.FC<{
     const segment = getSegmentByIndices(indices);
     ctx.setSelectionRanges([Range.inclusive(segment.start, segment.end)]); // 更新选中的内容
     if (!select.isByteVisible(dimensions, columnWidth, offset, segment.start)) {
-      console.log("4");
       setOffset(
         Math.max(
           0,
           select.startOfRowContainingByte(
-            segment.end + 1 - select.getDisplayedBytes(dimensions, columnWidth) / 3,
+            segment.start + 1 - select.getDisplayedBytes(dimensions, columnWidth) / 3,
             columnWidth,
           ),
         ),

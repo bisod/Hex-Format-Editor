@@ -177,6 +177,10 @@ addTextDecoder("utf-16", 2);
 
 export const inspectableTypes: readonly IInspectableType[] = inspectTypesBuilder;
 
+export const getFormatByLabel = (label: string): IInspectableType | undefined => {
+  return inspectableTypes.find(format => format.label === label);
+};
+
 export interface IFormat {
   label: string;
   minBytes: number;
