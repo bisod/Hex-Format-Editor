@@ -142,7 +142,6 @@ const Editor: React.FC = () => {
         position={contextMenuProps.position}
       />
       {/* 左侧菜单栏 */}
-      {/* <SegmentMenu setEditSegment={setEditSegment} /> */}
       <SegmentMenu
         menuItems={segmentMenu}
         setMenuItems={setSegmentMenu}
@@ -162,17 +161,6 @@ const Editor: React.FC = () => {
         <DataHeader />
         {/* 数据滚动容器 */}
         <ScrollContainer segmentMenu={segmentMenu} />
-        {/* {editSegment ? null : (
-          <>
-
-            <DataHeader />
-
-            <ScrollContainer />
-          </>
-        )} */}
-        {/* 如果 editSegment 存在，则渲染 SegmentEdit 组件 */}
-        {/* {editSegment && <SegmentEdit segment={editSegment} onClose={() => setEditSegment(null)} />}
-        {editSegment && <DataInspectorHover />} */}
         {/* 只读警告 */}
         <ReadonlyWarning />
         {/* 数据检查器悬停信息 */}

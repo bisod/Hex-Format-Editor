@@ -442,9 +442,8 @@ export const SegmentMenu: React.FC<{
       if (segmentIndices.length) {
         // 处理选中内容在单个分段中的情况
         // 处理选中内容在单个分段中的情况
-        const newMenuItems = handleSingleSegment(selectedRange, segmentIndices);
+        handleSingleSegment(selectedRange, segmentIndices);
         // 更新菜单项
-        setMenuItems(newMenuItems);
       }
       // 如果选中内容不在任何现有分段中
       else {
@@ -489,7 +488,7 @@ export const SegmentMenu: React.FC<{
   };
 
   // 处理选中内容在单个分段中的情况
-  const handleSingleSegment = (selectedRange: Range, segmentIndices: number[]): Segment[] => {
+  const handleSingleSegment = (selectedRange: Range, segmentIndices: number[]) => {
     const handleSegment = getSegmentByIndices(segmentIndices, menuItems);
 
     // 如果选中内容与当前分段完全重合，无需拆分
@@ -499,7 +498,7 @@ export const SegmentMenu: React.FC<{
     }
 
     let newHandleSegments: Segment[]; // 新的子分段列表
-
+    let change = 0;
     // 如果选中内容的开始与当前分段的开始相同
     if (selectedRange.start === handleSegment.start) {
       // 在选中内容的开始处拆分分段，并获取更新后的子分段列表
@@ -509,13 +508,17 @@ export const SegmentMenu: React.FC<{
     else if (selectedRange.end === handleSegment.end) {
       // 在选中内容的结束处拆分分段，并获取更新后的子分段列表
       newHandleSegments = splitSegmentAtEnd(selectedRange, handleSegment);
+      change = 2;
     }
     // 其他情况，在选中内容中间位置拆分分段，并获取更新后的子分段列表
     else {
       newHandleSegments = splitSegmentInMiddle(selectedRange, handleSegment);
+      change = 1;
     }
 
-    return replaceSegmentAtIndex(newHandleSegments, segmentIndices); // 返回最高层次的分段列表
+    setMenuItems(replaceSegmentAtIndex(newHandleSegments, segmentIndices));
+    segmentIndices[segmentIndices.length - 1] += change;
+    setSelectedSegmentIndices(segmentIndices);
   };
 
   const replaceSegmentAtIndex = (
@@ -738,7 +741,7 @@ export const SegmentMenu: React.FC<{
         }
 
         let newSubSegments: Segment[]; // 新的子分段列表
-
+        let change = 0;
         // 如果选中内容的开始与当前分段的开始相同
         if (selectedRange.start === parentSegment.start) {
           // 在选中内容的开始处拆分分段，并获取更新后的子分段列表
@@ -748,10 +751,12 @@ export const SegmentMenu: React.FC<{
         else if (selectedRange.end === parentSegment.end) {
           // 在选中内容的结束处拆分分段，并获取更新后的子分段列表
           newSubSegments = splitSegmentAtEnd(selectedRange, parentSegment, true);
+          change = 2;
         }
         // 其他情况，在选中内容中间位置拆分分段，并获取更新后的子分段列表
         else {
           newSubSegments = splitSegmentInMiddle(selectedRange, parentSegment, true);
+          change = 1;
         }
         // 将新创建的子分段添加到父分段中
         parentSegment.addSubSegments(newSubSegments);
@@ -759,6 +764,8 @@ export const SegmentMenu: React.FC<{
 
         // 更新菜单项
         setMenuItems([...menuItems]);
+        segmentIndices.push(change);
+        setSelectedSegmentIndices(segmentIndices);
       } else {
         showWarningMessage("选中内容跨越多个分段，无法处理");
       }

@@ -334,9 +334,6 @@ const DataRows: React.FC<{
   const endPageStartsAt = endPageNo * dataPageSize;
 
   const rows: React.ReactChild[] = [];
-  // console.log(
-  //   `offset== ${offset}  ;  displayedBytes== ${displayedBytes} ; columnWidth== ${columnWidth}  `,
-  // );
   for (let i = startPageStartsAt; i <= endPageStartsAt && i < fileSize; i += dataPageSize) {
     rows.push(
       <DataPage
@@ -475,7 +472,6 @@ const DataPageContents: React.FC<IDataPageProps> = props => {
                 length: segmentStart - rawOffset,
                 isdisplay: prevFormat === "raw" ? true : false,
               };
-              // console.log(`isdisplay: prevFormat === ${prevFormat}"raw" ? ${prevFormat === "raw"}`);
               result.push(firstSlice);
             }
             result.push(slice);
@@ -830,13 +826,38 @@ const DataRowContents: React.FC<{
   return (
     <>
       <DataCellGroup>{bytes}</DataCellGroup>
-      <DataCellGroup>
-        {rawSlice.isdisplay
-          ? rawSlice.format === "raw"
-            ? chars
-            : getFormatByLabel(rawSlice.format)?.convert(dv, le)
-          : ""}
-      </DataCellGroup>
+
+      {rawSlice.isdisplay &&
+        (rawSlice.format === "raw" ? (
+          <DataCellGroup>{chars}</DataCellGroup>
+        ) : (
+          <FormatDataDisplay width={width} length={rawSlice.length} offset={rawSlice.location}>
+            {getFormatByLabel(rawSlice.format)?.convert(dv, le)}
+          </FormatDataDisplay>
+        ))}
     </>
+  );
+};
+
+const FormatDataDisplay: React.FC<{ width: number; length: number; offset: number }> = ({
+  width, // 一行有几个char
+  length, // 需要显示的char数量
+  offset,
+  children,
+}) => {
+  const dimensions = useRecoilValue(select.dimensions);
+  const rows = Math.ceil((offset + length) / width); // Calculate number of rows needed
+  return (
+    <div
+      className={style.formatDataDisplay}
+      style={{
+        width: `${width * dimensions.rowPxHeight * 0.7}px`,
+        height: `${rows * dimensions.rowPxHeight}px`,
+        maxWidth: `${width * dimensions.rowPxHeight * 0.7}px`,
+        maxHeight: `${rows * dimensions.rowPxHeight}px`,
+      }}
+    >
+      {children}
+    </div>
   );
 };
