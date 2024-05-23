@@ -4,7 +4,12 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import { EditRangeOp, HexDocumentEditOp } from "../../shared/hexDocumentModel";
-import { DeleteAcceptedMessage, InspectorLocation, MessageType } from "../../shared/protocol";
+import {
+  DeleteAcceptedMessage,
+  Endianness,
+  InspectorLocation,
+  MessageType,
+} from "../../shared/protocol";
 import { Range } from "../../shared/util/range";
 import { PastePopup } from "./copyPaste";
 import _style from "./dataDisplay.css";
@@ -18,7 +23,13 @@ import {
   useIsUnsaved,
 } from "./dataDisplayContext";
 import { DataInspectorAside } from "./dataInspector";
-import { useGlobalHandler, useLastAsyncRecoilValue } from "./hooks";
+import { getFormatByLabel } from "./dataInspectorProperties";
+import {
+  useFileBytes,
+  useGlobalHandler,
+  useLastAsyncRecoilValue,
+  usePersistedState,
+} from "./hooks";
 import { Segment } from "./segmentMenu";
 import * as select from "./state";
 import { strings } from "./strings";
@@ -426,22 +437,6 @@ const LoadingDataRows: React.FC<IDataPageProps> = props => (
   </>
 );
 
-// // 获取默认字节序的状态值
-// const defaultEndianness = useRecoilValue(select.editorSettings).defaultEndianness;
-// // 获取和设置字节序的状态钩子
-// const [endianness, setEndianness] = usePersistedState("endianness", defaultEndianness);
-// 如果当前行在最底层分段的范围内，则将其加入结果列表
-// // 获取待查看的文件字节信息
-// const target = useFileBytes(segmentStart, segment.length);
-// // 创建 DataView 实例来处理字节数据
-// const dv = new DataView(target.buffer);
-// // 判断字节序是否为小端序
-// const le = endianness === Endianness.Little;
-// display:
-//   segment.displayFormat === "raw"
-//     ? undefined
-//     : getFormatByLabel(segment.displayFormat)?.convert(dv, le),
-
 interface IRawSlice {
   location: number;
   format: string;
@@ -745,9 +740,21 @@ const DataRowContents: React.FC<{
   rawBytes: Uint8Array;
   rawSlice: IRawSlice;
 }> = ({ offset, width, showDecodedText, rawBytes, rawSlice }) => {
-  // if (!rawSlice.isdisplay) {
-  //   console.log(`第${offset.toString(16).padStart(8, "0").toUpperCase()}行，不显示`);
-  // }
+  // 获取默认字节序的状态值
+  const defaultEndianness = useRecoilValue(select.editorSettings).defaultEndianness;
+  // 获取和设置字节序的状态钩子
+  const [endianness, setEndianness] = usePersistedState("endianness", defaultEndianness);
+  // 如果当前行在最底层分段的范围内，则将其加入结果列表
+  // 获取待查看的文件字节信息
+  const target = useFileBytes(offset + rawSlice.location, rawSlice.length);
+  // 创建 DataView 实例来处理字节数据
+  const dv = new DataView(target.buffer);
+  // 判断字节序是否为小端序
+  const le = endianness === Endianness.Little;
+  // display:
+  //   segment.displayFormat === "raw"
+  //     ? undefined
+  //     : getFormatByLabel(segment.displayFormat)?.convert(dv, le),
   let memoValue = "";
   for (const byte of rawBytes) {
     memoValue += "," + byte;
@@ -823,7 +830,13 @@ const DataRowContents: React.FC<{
   return (
     <>
       <DataCellGroup>{bytes}</DataCellGroup>
-      <DataCellGroup>{rawSlice.format === "raw" ? chars : ""}</DataCellGroup>
+      <DataCellGroup>
+        {rawSlice.isdisplay
+          ? rawSlice.format === "raw"
+            ? chars
+            : getFormatByLabel(rawSlice.format)?.convert(dv, le)
+          : ""}
+      </DataCellGroup>
     </>
   );
 };
