@@ -184,7 +184,10 @@ export const getFormatByLabel = (label: string): IInspectableType | undefined =>
 export interface IFormat {
   label: string;
   minBytes: number;
-  useNumber: number;
+  locations: number[][];
+  isArray?: boolean;
+  arrayItemFormat?: string;
+  arrayLength?: number;
   subStructures?: IFormat[];
 }
 
@@ -204,22 +207,23 @@ export class FormatManager {
 
   private initDefaultFormats() {
     this.specialFormats.push(
-      { label: "raw", minBytes: 1, useNumber: 1 },
-      { label: "undefStruct", minBytes: 1, useNumber: 0 },
+      { label: "raw", minBytes: 1, locations: [] },
+      { label: "undefStruct", minBytes: 1, locations: [] },
+      // { label: "array", minBytes: 1 },
     );
     // this.specialFormats.push();
     this.baseformats.push(
       ...baseTypes.map(format => ({
         label: format.label,
         minBytes: format.minBytes,
-        useNumber: 0,
+        locations: [],
       })),
     );
 
     this.textFormats.push(
-      { label: "ASCII", minBytes: 1, useNumber: 0 },
-      { label: "UTF-8", minBytes: 1, useNumber: 0 },
-      { label: "UTF-16", minBytes: 1, useNumber: 0 },
+      { label: "ASCII", minBytes: 1, locations: [] },
+      { label: "UTF-8", minBytes: 1, locations: [] },
+      { label: "UTF-16", minBytes: 1, locations: [] },
     );
   }
 
@@ -237,23 +241,75 @@ export class FormatManager {
     return this.textFormats;
   }
 
+  getUserFormats(): ReadonlyArray<IFormat> {
+    return this.userFormats;
+  }
+
   getAllFormats(): ReadonlyArray<IFormat> {
-    const allFormats = [...this.baseformats, ...this.specialFormats, ...this.userFormats];
+    const allFormats = [
+      ...this.baseformats,
+      ...this.textFormats,
+      ...this.specialFormats,
+      ...this.userFormats,
+    ];
     return allFormats;
   }
 
-  // // Get format by label
-  // getFormatByLabel(label: string): IFormat | undefined {
-  //   return this.formats.find(format => format.label === label);
-  // }
+  getAtomFormats(): ReadonlyArray<IFormat> {
+    const atomFormats = [...this.baseformats, ...this.textFormats];
+    return atomFormats;
+  }
 
-  // // Update format by label
-  // updateFormatByLabel(label: string, updatedFormat: Partial<IFormat>): void {
-  //   const index = this.formats.findIndex(format => format.label === label);
-  //   if (index !== -1) {
-  //     this.formats[index] = { ...this.formats[index], ...updatedFormat };
-  //   }
-  // }
+  // // Get format by label
+  getFormatByLabel(label: string): IFormat | undefined {
+    return this.getAllFormats().find(format => format.label === label);
+  }
+
+  // Update format by label
+  addLocationByLabel(label: string, location: number[]): void {
+    const index = this.userFormats.findIndex(format => format.label === label);
+    if (index !== -1) {
+      if (this.userFormats[index].locations === undefined) {
+        this.userFormats[index].locations = [];
+      }
+      this.userFormats[index].locations.push(location);
+      this.userFormats[index].locations.forEach(value => {
+        console.log(`[${value}]`);
+      });
+    }
+  }
+
+  removeLocationByLabel(label: string, location: number[]): void {
+    const index = this.userFormats.findIndex(format => format.label === label);
+    if (index !== -1 && this.userFormats[index].locations) {
+      // 找到了包含该位置的格式
+      const locationIndex = this.userFormats[index].locations.findIndex(loc => {
+        // 检查位置是否匹配
+        return loc.every((value, idx) => value === location[idx]);
+      });
+      if (locationIndex !== -1) {
+        // 从位置数组中移除该位置
+        // const index = locationIndex ? locationIndex : -1;
+        this.userFormats[index].locations.splice(locationIndex, 1);
+        if (this.userFormats[index].locations.length === 0) {
+          this.deleteFormatByLabel(label);
+        }
+      }
+    }
+  }
+  deleteFormatByLabel(label: string): void {
+    const deleteFromArray = (formats: IFormat[]) => {
+      const index = formats.findIndex(format => format.label === label);
+      if (index !== -1) {
+        formats.splice(index, 1);
+      }
+    };
+
+    // deleteFromArray(this.baseformats);
+    // deleteFromArray(this.specialFormats);
+    deleteFromArray(this.userFormats);
+    // deleteFromArray(this.textFormats);
+  }
 }
 
 export const formatManager = new FormatManager();

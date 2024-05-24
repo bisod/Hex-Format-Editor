@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useRecoilState } from "recoil";
+import { inputModalState } from "./state";
 import _style from "./toolTip.css";
 import { throwOnUndefinedAccessInDev } from "./util";
 
@@ -142,5 +144,34 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
         </div>
       )}
     </>
+  );
+};
+
+export const InputModal: React.FC = () => {
+  const [inputValue, setInputValue] = useState("");
+  const [modalState, setModalState] = useRecoilState(inputModalState);
+
+  if (!modalState.isVisible) return null;
+
+  const handleSubmit = () => {
+    modalState.onSubmit(inputValue);
+    setModalState({ isVisible: false, onSubmit: () => {} });
+    setInputValue("");
+  };
+
+  const handleCancel = () => {
+    setModalState({ isVisible: false, onSubmit: () => {} });
+    setInputValue("");
+  };
+
+  return (
+    <div className={style.modal}>
+      <div className={style.modalContent}>
+        <h3>请输入格式名称：</h3>
+        <input type="text" value={inputValue} onChange={e => setInputValue(e.target.value)} />
+        <button onClick={handleSubmit}>确认</button>
+        <button onClick={handleCancel}>取消</button>
+      </div>
+    </div>
   );
 };

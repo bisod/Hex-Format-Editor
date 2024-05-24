@@ -2,7 +2,7 @@ import ListSelection from "@vscode/codicons/src/icons/list-selection.svg";
 import TriangleDown from "@vscode/codicons/src/icons/triangle-down.svg";
 import TriangleRight from "@vscode/codicons/src/icons/triangle-right.svg";
 import React, { useEffect, useState } from "react";
-import { useRecoilState, useRecoilValue } from "recoil";
+import { useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
 import { MessageType } from "../../shared/protocol";
 import { Range } from "../../shared/util/range";
 import { useDisplayContext } from "./dataDisplayContext";
@@ -14,6 +14,22 @@ import { throwOnUndefinedAccessInDev } from "./util";
 
 const style = throwOnUndefinedAccessInDev(_style);
 
+function areListsNotEqual<T>(list1: T[], list2: T[]): boolean {
+  // 如果两个列表长度不相等，则它们肯定不相等
+  if (list1.length !== list2.length) {
+    return true;
+  }
+
+  // 比较每个元素是否相等
+  for (let i = 0; i < list1.length; i++) {
+    if (list1[i] !== list2[i]) {
+      return true;
+    }
+  }
+
+  // 如果以上条件都不满足，则列表相等
+  return false;
+}
 const showWarningMessage = (message: string) => {
   console.error(message);
   select.messageHandler.sendEvent({
@@ -29,12 +45,18 @@ export class Segment {
   length: number;
   subSegments: Segment[]; // 添加子分段属性
   displayFormat: string; // 添加显示格式属性
+  format: string;
   isArrayItem: boolean;
+  arrayFormat?: string;
+  belongStruct: number[] | undefined;
+  // locationInStruct: number[];
 
   constructor(
     name: string,
     start: number,
     end: number,
+    belongStruct: number[] | undefined,
+    // locationInStruct: number[] = [],
     displayFormat: string = "raw",
     isArrayItem: boolean = false,
   ) {
@@ -44,7 +66,10 @@ export class Segment {
     this.length = this.end - this.start + 1;
     this.subSegments = []; // 初始化子分段数组
     this.displayFormat = displayFormat; // 设置默认显示格式
+    this.format = displayFormat;
     this.isArrayItem = isArrayItem;
+    this.belongStruct = belongStruct;
+    // this.locationInStruct = locationInStruct;
   }
 
   get startHex(): string {
@@ -58,19 +83,55 @@ export class Segment {
   private toHex(position: number): string {
     return position.toString(16).padStart(10, "0");
   }
-  toIFormat(): IFormat {
-    const iFormat: IFormat = {
-      label: this.displayFormat,
-      minBytes: this.length,
-      useNumber: 1,
-      subStructures: this.subSegments.map(subSegment => subSegment.toIFormat()),
+
+  // isInUserFormats = (): boolean => {
+  //   return formatManager.getUserFormats().some(format => format.label === this.format);
+  // };
+
+  // subSegmentsToIFormat(): IFormat[] {
+  //   const iFormats: IFormat[] = [];
+  //   // 遍历子分段
+  //   this.subSegments.forEach(subSegment => {
+  //     // 如果子分段有子结构，则将其转换为 IFormat
+  //     // const subStructures = subSegment.subSegmentsToIFormat();
+
+  //     // 构建当前分段的 IFormat
+  //     const iFormat: IFormat = {
+  //       label: subSegment.displayFormat,
+  //       minBytes: subSegment.length,
+  //       isArray: subSegment.format === "array",
+  //       arrayItemFormat:
+  //         subSegment.format === "array" ? subSegment.subSegments[0].displayFormat : undefined,
+  //       arrayLength: subSegment.format === "array" ? subSegment.subSegments.length : undefined,
+  //       subStructures:
+  //         subSegment.format === "array" || subSegment.format === "struct"
+  //           ? undefined
+  //           : subSegment.subSegments.length > 0
+  //             ? subSegment.subSegmentsToIFormat()
+  //             : undefined,
+  //     };
+
+  //     iFormats.push(iFormat);
+  //   });
+  //   return iFormats;
+  // }
+  createStructByFormat(format: string, indices: number[]) {
+    this.format = "struct";
+    this.displayFormat = format;
+    const setBelongStruct = (segments: Segment[]) => {
+      segments.forEach(segment => {
+        segment.belongStruct = indices;
+        setBelongStruct(segment.subSegments);
+      });
     };
-    return iFormat;
+    setBelongStruct(this.subSegments);
   }
 
   // 设置显示格式
-  setDisplayFormat(format: string) {
-    this.displayFormat = format;
+  setDisplayFormat(format: string, isarray: boolean = false) {
+    this.format = isarray ? `array` : format;
+
+    this.displayFormat = isarray ? `Array<${format}>[${this.subSegments.length}]` : format;
   }
 
   clearDisplayFormat = () => {
@@ -89,7 +150,7 @@ export class Segment {
     this.subSegments.push(...subSegments);
   }
 
-  createSubSegmentByFormat(format: string, splitLength: number) {
+  setArrayByFormat(format: string, splitLength: number) {
     if (this.subSegments.length > 0) {
       showWarningMessage(`已经拥有分段格式，不可划分，请清除分段后再尝试`);
       return;
@@ -109,11 +170,10 @@ export class Segment {
       const start = this.start + i * splitLength;
       const end = start + splitLength - 1;
       const subSegmentName = `${this.name}_${format}_${i + 1}`;
-      const subSegment = new Segment(subSegmentName, start, end, format, true);
+      const subSegment = new Segment(subSegmentName, start, end, this.belongStruct, format, true);
       this.subSegments.push(subSegment);
     }
-
-    this.displayFormat = `Array<${format}>[${numSegments}]`;
+    this.setDisplayFormat(format, true);
   }
 }
 
@@ -130,6 +190,7 @@ export const SegmentItem: React.FC<{
   openContextMenu: (myitems: MenuItem[], mouseX: number, mouseY: number) => void;
   splitSegmentByFormat: (segmentIndices: number[], format: string, splitLength: number) => void;
   getSegmentByIndices: (indices: number[]) => Segment;
+  findIndicesBySegment: (mysegment: Segment) => number[];
 }> = ({
   segment,
   indices,
@@ -143,10 +204,12 @@ export const SegmentItem: React.FC<{
   openContextMenu,
   splitSegmentByFormat,
   getSegmentByIndices,
+  findIndicesBySegment,
 }) => {
   const [isEditName, setIsEditName] = useState(false);
   const [newName, setNewName] = useState(segment.name);
   const [isSubSegmentsExpanded, setIsSubSegmentsExpanded] = useState(true); // 控制子分段展开与折叠
+  const setInputModalState = useSetRecoilState(select.inputModalState);
 
   const getAllName = () => {
     const names = indices.map(
@@ -162,9 +225,12 @@ export const SegmentItem: React.FC<{
     text.push(
       getAllName(),
       `偏移：${segment.startHex}-${segment.endHex}`,
-      `长度:${segment.length}B`,
+      `长度：${segment.length}B`,
       `格式：${segment.displayFormat}`,
     );
+    if (segment.belongStruct !== undefined) {
+      text.push(`所属结构体：${getSegmentByIndices(segment.belongStruct).displayFormat}`);
+    }
     showToolTip(text, e.clientX, e.clientY - 10);
   };
   const handleMouseLeave = () => {
@@ -186,8 +252,22 @@ export const SegmentItem: React.FC<{
       if (segment.displayFormat !== "raw") {
         newitems.push({
           label: "清除格式",
-          onClick: () => segment.clearDisplayFormat(),
+          onClick: () => {
+            if (segment.format === "struct") {
+              formatManager.removeLocationByLabel(segment.displayFormat, indices);
+            }
+            segment.clearDisplayFormat();
+            updateFormat();
+          },
         });
+
+        if (segment.displayFormat === "undefStruct") {
+          // 创建格式功能：读取用户输入的名称，检测是否重名，不重名则修改格式并添加入格式管理器
+          newitems.push({
+            label: "定义结构体",
+            onClick: () => handleCreateFormat(segment),
+          });
+        }
 
         if (segment.subSegments.length === 0) {
           // 添加规定格式选项
@@ -201,17 +281,38 @@ export const SegmentItem: React.FC<{
                   : type.label,
               onClick: () => {
                 segment.length > type.minBytes
-                  ? segment.createSubSegmentByFormat(type.label, type.minBytes)
+                  ? segment.setArrayByFormat(type.label, type.minBytes)
                   : segment.setDisplayFormat(type.label);
+                updateFormat();
               },
             }));
           formatOptions.push(
             ...formatManager.getTextFormats().map(type => ({
               label: type.label,
-              onClick: () => segment.setDisplayFormat(type.label),
+              onClick: () => {
+                segment.setDisplayFormat(type.label);
+                updateFormat();
+              },
             })),
           );
-
+          if (segment.belongStruct === undefined) {
+            formatOptions.push(
+              ...formatManager
+                .getUserFormats()
+                .filter(type => segment.length === type.minBytes)
+                .map(type => ({
+                  label: type.label,
+                  onClick: () => {
+                    const a = formatManager.getFormatByLabel(type.label)?.locations;
+                    if (a !== undefined) {
+                      setFormatBySegment(getSegmentByIndices(a[0]));
+                    }
+                    formatManager.addLocationByLabel(type.label, indices);
+                    // updateFormat();
+                  },
+                })),
+            );
+          }
           if (formatOptions.length > 0) {
             newitems.push({
               label: "修改格式",
@@ -234,17 +335,37 @@ export const SegmentItem: React.FC<{
                   : type.label,
               onClick: () => {
                 segment.length > type.minBytes
-                  ? segment.createSubSegmentByFormat(type.label, type.minBytes)
+                  ? segment.setArrayByFormat(type.label, type.minBytes)
                   : segment.setDisplayFormat(type.label);
+                updateFormat();
               },
             }));
           formatOptions.push(
             ...formatManager.getTextFormats().map(type => ({
               label: type.label,
-              onClick: () => segment.setDisplayFormat(type.label),
+              onClick: () => {
+                segment.setDisplayFormat(type.label);
+                updateFormat();
+              },
             })),
           );
-
+          if (segment.belongStruct === undefined) {
+            formatOptions.push(
+              ...formatManager
+                .getUserFormats()
+                .filter(type => segment.length === type.minBytes)
+                .map(type => ({
+                  label: type.label,
+                  onClick: () => {
+                    const a = formatManager.getFormatByLabel(type.label);
+                    if (a !== undefined) {
+                      setFormatBySegment(getSegmentByIndices(a.locations[0]));
+                    }
+                    formatManager.addLocationByLabel(type.label, indices);
+                  },
+                })),
+            );
+          }
           if (formatOptions.length > 0) {
             newitems.push({
               label: "设置显示格式",
@@ -291,6 +412,76 @@ export const SegmentItem: React.FC<{
     e.preventDefault();
     e.stopPropagation();
     openContextMenu(newitems, e.clientX, e.clientY);
+  };
+
+  const handleCreateFormat = (segment: Segment) => {
+    setInputModalState({
+      isVisible: true,
+      onSubmit: (formatName: string) => {
+        const existingFormats = formatManager.getAllFormats();
+        if (existingFormats.some(format => format.label === formatName)) {
+          showWarningMessage("格式名称重复，请使用其他名称。");
+          return;
+        } else {
+          const newFormat: IFormat = {
+            label: formatName,
+            minBytes: segment.length,
+            locations: [indices],
+          };
+
+          formatManager.addFormat(newFormat);
+          segment.createStructByFormat(formatName, indices);
+        }
+      },
+    });
+  };
+
+  const setFormatBySegment = (formatSegment: Segment, targetSegment: Segment = segment) => {
+    targetSegment.format = formatSegment.format;
+    targetSegment.displayFormat = formatSegment.displayFormat;
+    targetSegment.subSegments = []; // 清空当前分段的子分段
+
+    const parentStart = targetSegment.start;
+
+    const createSubSegmentRecursively = (parent: Segment, subSegment: Segment) => {
+      const newStart = parentStart + subSegment.start - formatSegment.start;
+      const newEnd = parentStart + subSegment.end - formatSegment.start;
+      const newSubSegment = new Segment(
+        subSegment.name,
+        newStart,
+        newEnd,
+        targetSegment.belongStruct
+          ? targetSegment.belongStruct
+          : findIndicesBySegment(targetSegment),
+        subSegment.displayFormat,
+        subSegment.isArrayItem,
+      );
+      newSubSegment.subSegments = subSegment.subSegments.map(subSeg => {
+        return createSubSegmentRecursively(newSubSegment, subSeg);
+      });
+      return newSubSegment;
+    };
+
+    targetSegment.subSegments = formatSegment.subSegments.map(subSeg => {
+      return createSubSegmentRecursively(targetSegment, subSeg);
+    });
+  };
+
+  const updateFormat = () => {
+    if (segment.belongStruct !== undefined) {
+      const changeIndices = [...indices];
+      const changeLocation = changeIndices.slice(segment.belongStruct.length);
+      formatManager
+        .getFormatByLabel(getSegmentByIndices(segment.belongStruct).displayFormat)
+        ?.locations.forEach(value => {
+          const targetIndices = [...value, ...changeLocation];
+          console.log(indices);
+          if (areListsNotEqual(targetIndices, indices)) {
+            const targetSegment = getSegmentByIndices(targetIndices);
+            setFormatBySegment(segment, targetSegment);
+          }
+        });
+    }
   };
 
   const handleMergeUp = () => {
@@ -404,6 +595,7 @@ export const SegmentItem: React.FC<{
               openContextMenu={openContextMenu}
               splitSegmentByFormat={splitSegmentByFormat}
               getSegmentByIndices={getSegmentByIndices}
+              findIndicesBySegment={findIndicesBySegment}
             />
           ))}
         </div>
@@ -507,6 +699,9 @@ export const SegmentMenu: React.FC<{
     }, []);
   };
 
+  const findIndicesBySegment = (segment: Segment) => {
+    return findSegmentIndices(segment.start, segment.end, menuItems);
+  };
   // 根据索引序列获取分段
   const getSegmentByIndices = (indices: number[], segments: Segment[] = menuItems): Segment => {
     let currentSegment = segments[indices[0]]; // 获取根分段
@@ -605,13 +800,28 @@ export const SegmentMenu: React.FC<{
     isNewName: boolean = false,
   ): Segment[] => {
     // 创建新的分段
-    const newItem1 = new Segment(`分段${nameIndex}`, selectedRange.start, selectedRange.end);
+    const newItem1 = new Segment(
+      `分段${nameIndex}`,
+      selectedRange.start,
+      selectedRange.end,
+      handleSegment.belongStruct,
+    );
     let newItem2: Segment;
     if (isNewName) {
-      newItem2 = new Segment(`分段${nameIndex + 1}`, selectedRange.end + 1, handleSegment.end);
+      newItem2 = new Segment(
+        `分段${nameIndex + 1}`,
+        selectedRange.end + 1,
+        handleSegment.end,
+        handleSegment.belongStruct,
+      );
       setNameIndex(prevIndex => prevIndex + 2);
     } else {
-      newItem2 = new Segment(handleSegment.name, selectedRange.end + 1, handleSegment.end);
+      newItem2 = new Segment(
+        handleSegment.name,
+        selectedRange.end + 1,
+        handleSegment.end,
+        handleSegment.belongStruct,
+      );
       setNameIndex(prevIndex => prevIndex + 1);
     }
     return [newItem1, newItem2];
@@ -624,13 +834,28 @@ export const SegmentMenu: React.FC<{
     isNewName: boolean = false,
   ): Segment[] => {
     // 创建新的分段
-    const newItem1 = new Segment(`分段${nameIndex}`, selectedRange.start, selectedRange.end);
+    const newItem1 = new Segment(
+      `分段${nameIndex}`,
+      selectedRange.start,
+      selectedRange.end,
+      handleSegment.belongStruct,
+    );
     let newItem2: Segment;
     if (isNewName) {
-      newItem2 = new Segment(`分段${nameIndex + 1}`, handleSegment.start, selectedRange.start - 1);
+      newItem2 = new Segment(
+        `分段${nameIndex + 1}`,
+        handleSegment.start,
+        selectedRange.start - 1,
+        handleSegment.belongStruct,
+      );
       setNameIndex(prevIndex => prevIndex + 2);
     } else {
-      newItem2 = new Segment(handleSegment.name, handleSegment.start, selectedRange.start - 1);
+      newItem2 = new Segment(
+        handleSegment.name,
+        handleSegment.start,
+        selectedRange.start - 1,
+        handleSegment.belongStruct,
+      );
       setNameIndex(prevIndex => prevIndex + 1);
     }
     // 返回更新后的子分段列表
@@ -644,17 +869,42 @@ export const SegmentMenu: React.FC<{
     isNewName: boolean = false,
   ): Segment[] => {
     // 创建新的分段
-    const newItem1 = new Segment(`分段${nameIndex}`, handleSegment.start, selectedRange.start - 1);
+    const newItem1 = new Segment(
+      `分段${nameIndex}`,
+      handleSegment.start,
+      selectedRange.start - 1,
+      handleSegment.belongStruct,
+    );
     // const newItem3 = new Segment(`分段${nameIndex + 1}`, selectedRange.end + 1, handleSegment.end);
     let newItem2: Segment;
     let newItem3: Segment;
     if (isNewName) {
-      newItem2 = new Segment(`分段${nameIndex + 1}`, selectedRange.start, selectedRange.end);
-      newItem3 = new Segment(`分段${nameIndex + 2}`, selectedRange.end + 1, handleSegment.end);
+      newItem2 = new Segment(
+        `分段${nameIndex + 1}`,
+        selectedRange.start,
+        selectedRange.end,
+        handleSegment.belongStruct,
+      );
+      newItem3 = new Segment(
+        `分段${nameIndex + 2}`,
+        selectedRange.end + 1,
+        handleSegment.end,
+        handleSegment.belongStruct,
+      );
       setNameIndex(prevIndex => prevIndex + 3);
     } else {
-      newItem2 = new Segment(handleSegment.name, selectedRange.start, selectedRange.end);
-      newItem3 = new Segment(`分段${nameIndex + 1}`, selectedRange.end + 1, handleSegment.end);
+      newItem2 = new Segment(
+        handleSegment.name,
+        selectedRange.start,
+        selectedRange.end,
+        handleSegment.belongStruct,
+      );
+      newItem3 = new Segment(
+        `分段${nameIndex + 1}`,
+        selectedRange.end + 1,
+        handleSegment.end,
+        handleSegment.belongStruct,
+      );
       setNameIndex(prevIndex => prevIndex + 2);
     }
 
@@ -672,6 +922,7 @@ export const SegmentMenu: React.FC<{
         previousSegment.name,
         previousSegment.start,
         currentSegment.end,
+        currentSegment.belongStruct,
       );
 
       const updatedMenuItems = [
@@ -693,6 +944,7 @@ export const SegmentMenu: React.FC<{
         previousSegment.name,
         previousSegment.start,
         currentSegment.end,
+        currentSegment.belongStruct,
       );
 
       // 更新父分段的子分段列表
@@ -714,7 +966,12 @@ export const SegmentMenu: React.FC<{
       if (index < menuItems.length - 1) {
         const currentSegment = menuItems[index];
         const nextSegment = menuItems[index + 1];
-        const mergedSegment = new Segment(nextSegment.name, currentSegment.start, nextSegment.end);
+        const mergedSegment = new Segment(
+          nextSegment.name,
+          currentSegment.start,
+          nextSegment.end,
+          currentSegment.belongStruct,
+        );
         const updatedMenuItems = [
           ...menuItems.slice(0, index),
           mergedSegment,
@@ -732,7 +989,12 @@ export const SegmentMenu: React.FC<{
 
         // 向下合并分段
         const nextSegment = parentSegment.subSegments[index + 1];
-        const mergedSegment = new Segment(nextSegment.name, currentSegment.start, nextSegment.end);
+        const mergedSegment = new Segment(
+          nextSegment.name,
+          currentSegment.start,
+          nextSegment.end,
+          currentSegment.belongStruct,
+        );
 
         // 更新父分段的子分段列表
         const updatedSubSegments = [
@@ -829,6 +1091,7 @@ export const SegmentMenu: React.FC<{
         `${currentSegment.name}_${format}_${i + 1}`,
         start,
         end,
+        currentSegment.belongStruct,
         format,
       );
       newHandleSegments.push(newHandleSegment);
@@ -857,6 +1120,7 @@ export const SegmentMenu: React.FC<{
           openContextMenu={openContextMenu}
           splitSegmentByFormat={splitSegmentByFormat}
           getSegmentByIndices={getSegmentByIndices}
+          findIndicesBySegment={findIndicesBySegment}
         />
       ))}
       {selectedSegmentIndices.length > 0 && (

@@ -14,7 +14,14 @@ import { Segment, SegmentMenu } from "./segmentMenu";
 import { SettingsGear } from "./settings";
 import * as select from "./state";
 import { strings } from "./strings";
-import { ContextMenu, ContextMenuProps, MenuItem, ToolTip, TooltipProps } from "./toolTip"; // 导入 Tooltip 组件
+import {
+  ContextMenu,
+  ContextMenuProps,
+  InputModal,
+  MenuItem,
+  ToolTip,
+  TooltipProps,
+} from "./toolTip"; // 导入 Tooltip 组件
 import { throwOnUndefinedAccessInDev } from "./util";
 import { VsProgressIndicator } from "./vscodeUi";
 
@@ -71,7 +78,7 @@ const Editor: React.FC = () => {
   const [bypassLargeFilePrompt, setBypassLargeFile] = useRecoilState(select.bypassLargeFilePrompt);
   // const [segmentMenu, setSegmentMenu] = useState<Segment[]>(); // 第一个分段为全文
   const fileSize = useRecoilValue(select.fileSize) ?? 0; // 如果为undefined，则默认为0
-  const [segmentMenu, setSegmentMenu] = useState([new Segment("全文", 0, fileSize - 1)]); // 第一个分段为全文
+  const [segmentMenu, setSegmentMenu] = useState([new Segment("全文", 0, fileSize - 1, undefined)]); // 第一个分段为全文
   // const [editSegment, setEditSegment] = useState<Segment | null>(null); // 控制是否显示编辑组件
   const [tooltipProps, setTooltipProps] = useState<TooltipProps>({
     isVisible: false,
@@ -141,6 +148,8 @@ const Editor: React.FC = () => {
         onClose={contextMenuProps.onClose}
         position={contextMenuProps.position}
       />
+
+      <InputModal />
       {/* 左侧菜单栏 */}
       <SegmentMenu
         menuItems={segmentMenu}
@@ -149,6 +158,7 @@ const Editor: React.FC = () => {
         hideToolTip={hideToolTip}
         openContextMenu={openContextMenu}
       />
+
       <div
         className={style.container}
         style={{ "--cell-size": `${dimensions.rowPxHeight}px` } as React.CSSProperties}
