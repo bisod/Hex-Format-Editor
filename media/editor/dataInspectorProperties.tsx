@@ -273,9 +273,6 @@ export class FormatManager {
         this.userFormats[index].locations = [];
       }
       this.userFormats[index].locations.push(location);
-      this.userFormats[index].locations.forEach(value => {
-        console.log(`[${value}]`);
-      });
     }
   }
 

@@ -191,6 +191,8 @@ export const SegmentItem: React.FC<{
   splitSegmentByFormat: (segmentIndices: number[], format: string, splitLength: number) => void;
   getSegmentByIndices: (indices: number[]) => Segment;
   findIndicesBySegment: (mysegment: Segment) => number[];
+  setFormatBySegment: (formatSegment: Segment, targetSegment: Segment) => void;
+  updateFormatByIndices: (indices: number[]) => void;
 }> = ({
   segment,
   indices,
@@ -205,6 +207,8 @@ export const SegmentItem: React.FC<{
   splitSegmentByFormat,
   getSegmentByIndices,
   findIndicesBySegment,
+  setFormatBySegment,
+  updateFormatByIndices,
 }) => {
   const [isEditName, setIsEditName] = useState(false);
   const [newName, setNewName] = useState(segment.name);
@@ -303,9 +307,9 @@ export const SegmentItem: React.FC<{
                 .map(type => ({
                   label: type.label,
                   onClick: () => {
-                    const a = formatManager.getFormatByLabel(type.label)?.locations;
+                    const a = formatManager.getFormatByLabel(type.label);
                     if (a !== undefined) {
-                      setFormatBySegment(getSegmentByIndices(a[0]));
+                      setFormatBySegment(getSegmentByIndices(a.locations[0]), segment);
                     }
                     formatManager.addLocationByLabel(type.label, indices);
                     // updateFormat();
@@ -359,7 +363,7 @@ export const SegmentItem: React.FC<{
                   onClick: () => {
                     const a = formatManager.getFormatByLabel(type.label);
                     if (a !== undefined) {
-                      setFormatBySegment(getSegmentByIndices(a.locations[0]));
+                      setFormatBySegment(getSegmentByIndices(a.locations[0]), segment);
                     }
                     formatManager.addLocationByLabel(type.label, indices);
                   },
@@ -436,52 +440,8 @@ export const SegmentItem: React.FC<{
     });
   };
 
-  const setFormatBySegment = (formatSegment: Segment, targetSegment: Segment = segment) => {
-    targetSegment.format = formatSegment.format;
-    targetSegment.displayFormat = formatSegment.displayFormat;
-    targetSegment.subSegments = []; // 清空当前分段的子分段
-
-    const parentStart = targetSegment.start;
-
-    const createSubSegmentRecursively = (parent: Segment, subSegment: Segment) => {
-      const newStart = parentStart + subSegment.start - formatSegment.start;
-      const newEnd = parentStart + subSegment.end - formatSegment.start;
-      const newSubSegment = new Segment(
-        subSegment.name,
-        newStart,
-        newEnd,
-        targetSegment.belongStruct
-          ? targetSegment.belongStruct
-          : findIndicesBySegment(targetSegment),
-        subSegment.displayFormat,
-        subSegment.isArrayItem,
-      );
-      newSubSegment.subSegments = subSegment.subSegments.map(subSeg => {
-        return createSubSegmentRecursively(newSubSegment, subSeg);
-      });
-      return newSubSegment;
-    };
-
-    targetSegment.subSegments = formatSegment.subSegments.map(subSeg => {
-      return createSubSegmentRecursively(targetSegment, subSeg);
-    });
-  };
-
   const updateFormat = () => {
-    if (segment.belongStruct !== undefined) {
-      const changeIndices = [...indices];
-      const changeLocation = changeIndices.slice(segment.belongStruct.length);
-      formatManager
-        .getFormatByLabel(getSegmentByIndices(segment.belongStruct).displayFormat)
-        ?.locations.forEach(value => {
-          const targetIndices = [...value, ...changeLocation];
-          console.log(indices);
-          if (areListsNotEqual(targetIndices, indices)) {
-            const targetSegment = getSegmentByIndices(targetIndices);
-            setFormatBySegment(segment, targetSegment);
-          }
-        });
-    }
+    updateFormatByIndices(indices);
   };
 
   const handleMergeUp = () => {
@@ -596,6 +556,8 @@ export const SegmentItem: React.FC<{
               splitSegmentByFormat={splitSegmentByFormat}
               getSegmentByIndices={getSegmentByIndices}
               findIndicesBySegment={findIndicesBySegment}
+              setFormatBySegment={setFormatBySegment}
+              updateFormatByIndices={updateFormatByIndices}
             />
           ))}
         </div>
@@ -666,7 +628,9 @@ export const SegmentMenu: React.FC<{
       if (segmentIndices.length) {
         // 处理选中内容在单个分段中的情况
         // 处理选中内容在单个分段中的情况
+
         handleSingleSegment(selectedRange, segmentIndices);
+        updateFormatByIndices(segmentIndices);
         // 更新菜单项
       }
       // 如果选中内容不在任何现有分段中
@@ -717,11 +681,14 @@ export const SegmentMenu: React.FC<{
   // 处理选中内容在单个分段中的情况
   const handleSingleSegment = (selectedRange: Range, segmentIndices: number[]) => {
     const handleSegment = getSegmentByIndices(segmentIndices, menuItems);
-
-    // 如果选中内容与当前分段完全重合，无需拆分
+    if (handleSegment.format !== "raw") {
+      showWarningMessage("选中内容必须在raw中，请清除格式后重试");
+      return;
+    }
     if (selectedRange.start === handleSegment.start && selectedRange.end === handleSegment.end) {
+      // 如果选中内容与当前分段完全重合，无需拆分
       showWarningMessage("选中内容与分段完全重合，无需拆分");
-      return menuItems; // 返回原始菜单项列表
+      return;
     }
 
     let newHandleSegments: Segment[]; // 新的子分段列表
@@ -746,6 +713,9 @@ export const SegmentMenu: React.FC<{
     setMenuItems(replaceSegmentAtIndex(newHandleSegments, segmentIndices));
     segmentIndices[segmentIndices.length - 1] += change;
     setSelectedSegmentIndices(segmentIndices);
+    if (segmentIndices.length > 1) {
+      updateFormatByIndices(segmentIndices.slice(0, -1));
+    }
   };
 
   const replaceSegmentAtIndex = (
@@ -957,6 +927,9 @@ export const SegmentMenu: React.FC<{
       parentSegment.subSegments = updatedSubSegments;
       setSelectedSegmentIndices([...parentIndices, index - 1]); // 更新选中分段的索引序列
     }
+    if (segmentIndices.length > 1) {
+      updateFormatByIndices(segmentIndices.slice(0, -1));
+    }
   };
 
   // 向下合并分段
@@ -1007,6 +980,9 @@ export const SegmentMenu: React.FC<{
         setSelectedSegmentIndices([...parentIndices, index]); // 更新选中分段的索引序列
       }
     }
+    if (segmentIndices.length > 1) {
+      updateFormatByIndices(segmentIndices.slice(0, -1));
+    }
   };
 
   // 创建子分段
@@ -1025,6 +1001,10 @@ export const SegmentMenu: React.FC<{
       if (segmentIndices.length) {
         // 获取当前分段
         const parentSegment = getSegmentByIndices(segmentIndices, menuItems);
+        if (parentSegment.format !== "raw") {
+          showWarningMessage("选中内容必须在raw中，请清除格式后重试");
+          return;
+        }
         // 如果选中内容与当前分段完全重合，无需拆分
         if (
           selectedRange.start === parentSegment.start &&
@@ -1060,6 +1040,9 @@ export const SegmentMenu: React.FC<{
         setMenuItems([...menuItems]);
         segmentIndices.push(change);
         setSelectedSegmentIndices(segmentIndices);
+        if (segmentIndices.length > 1) {
+          updateFormatByIndices(segmentIndices.slice(0, -1));
+        }
       } else {
         showWarningMessage("选中内容跨越多个分段，无法处理");
       }
@@ -1100,6 +1083,54 @@ export const SegmentMenu: React.FC<{
     setSelectedSegmentIndices([]); // 更新选中分段的索引序列
   };
 
+  const setFormatBySegment = (formatSegment: Segment, targetSegment: Segment) => {
+    targetSegment.format = formatSegment.format;
+    targetSegment.displayFormat = formatSegment.displayFormat;
+    targetSegment.subSegments = []; // 清空当前分段的子分段
+
+    const parentStart = targetSegment.start;
+
+    const createSubSegmentRecursively = (parent: Segment, subSegment: Segment) => {
+      const newStart = parentStart + subSegment.start - formatSegment.start;
+      const newEnd = parentStart + subSegment.end - formatSegment.start;
+      const newSubSegment = new Segment(
+        subSegment.name,
+        newStart,
+        newEnd,
+        targetSegment.belongStruct
+          ? targetSegment.belongStruct
+          : findIndicesBySegment(targetSegment),
+        subSegment.displayFormat,
+        subSegment.isArrayItem,
+      );
+      newSubSegment.subSegments = subSegment.subSegments.map(subSeg => {
+        return createSubSegmentRecursively(newSubSegment, subSeg);
+      });
+      return newSubSegment;
+    };
+
+    targetSegment.subSegments = formatSegment.subSegments.map(subSeg => {
+      return createSubSegmentRecursively(targetSegment, subSeg);
+    });
+  };
+
+  const updateFormatByIndices = (indices: number[]) => {
+    const segment = getSegmentByIndices(indices);
+    if (segment.belongStruct !== undefined) {
+      const changeIndices = [...indices];
+      const changeLocation = changeIndices.slice(segment.belongStruct.length);
+      formatManager
+        .getFormatByLabel(getSegmentByIndices(segment.belongStruct).displayFormat)
+        ?.locations.forEach(value => {
+          const targetIndices = [...value, ...changeLocation];
+          if (areListsNotEqual(targetIndices, changeIndices)) {
+            const targetSegment = getSegmentByIndices(targetIndices);
+            setFormatBySegment(segment, targetSegment);
+          }
+        });
+    }
+  };
+
   return (
     <div className={style.segmentMenuContainer}>
       <button onClick={createSubSegment}>创建子分段</button>
@@ -1121,6 +1152,8 @@ export const SegmentMenu: React.FC<{
           splitSegmentByFormat={splitSegmentByFormat}
           getSegmentByIndices={getSegmentByIndices}
           findIndicesBySegment={findIndicesBySegment}
+          setFormatBySegment={setFormatBySegment}
+          updateFormatByIndices={updateFormatByIndices}
         />
       ))}
       {selectedSegmentIndices.length > 0 && (
