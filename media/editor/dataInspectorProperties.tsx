@@ -265,6 +265,10 @@ export class FormatManager {
     return this.getAllFormats().find(format => format.label === label);
   }
 
+  getUserFormatByLabel(label: string): IFormat | undefined {
+    return this.getUserFormats().find(format => format.label === label);
+  }
+
   // Update format by label
   addLocationByLabel(label: string, location: number[]): void {
     const index = this.userFormats.findIndex(format => format.label === label);
