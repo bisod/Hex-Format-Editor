@@ -185,10 +185,6 @@ export interface IFormat {
   label: string;
   minBytes: number;
   locations: number[][];
-  isArray?: boolean;
-  arrayItemFormat?: string;
-  arrayLength?: number;
-  subStructures?: IFormat[];
 }
 
 export class FormatManager {
@@ -225,6 +221,14 @@ export class FormatManager {
       { label: "UTF-8", minBytes: 1, locations: [] },
       { label: "UTF-16", minBytes: 1, locations: [] },
     );
+  }
+
+  resetFormats() {
+    this.baseformats = [];
+    this.specialFormats = [];
+    this.userFormats = [];
+    this.textFormats = [];
+    this.initDefaultFormats();
   }
 
   // Add a new format

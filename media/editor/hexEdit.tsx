@@ -78,7 +78,7 @@ const Editor: React.FC = () => {
   const [bypassLargeFilePrompt, setBypassLargeFile] = useRecoilState(select.bypassLargeFilePrompt);
   // const [segmentMenu, setSegmentMenu] = useState<Segment[]>(); // 第一个分段为全文
   const fileSize = useRecoilValue(select.fileSize) ?? 0; // 如果为undefined，则默认为0
-  const [segmentMenu, setSegmentMenu] = useState([new Segment("全文", 0, fileSize - 1, undefined)]); // 第一个分段为全文
+  const [segmentMenu, setSegmentMenu] = useState([new Segment("全文", 0, fileSize - 1, [])]); // 第一个分段为全文
   // const [editSegment, setEditSegment] = useState<Segment | null>(null); // 控制是否显示编辑组件
   const [tooltipProps, setTooltipProps] = useState<TooltipProps>({
     isVisible: false,

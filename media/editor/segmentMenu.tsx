@@ -47,8 +47,8 @@ export class Segment {
   displayFormat: string; // 添加显示格式属性
   format: string;
   isArrayItem: boolean;
-  arrayFormat?: string;
-  belongStruct: number[] | undefined;
+  // arrayFormat?: string;
+  belongStruct: number[];
   // locationInStruct: number[];
 
   constructor(
@@ -56,7 +56,7 @@ export class Segment {
     start: number,
     end: number,
     // format:string = "raw",
-    belongStruct: number[] | undefined,
+    belongStruct: number[],
     // locationInStruct: number[] = [],
     displayFormat: string = "raw",
     isArrayItem: boolean = false,
@@ -135,6 +135,10 @@ export class Segment {
       });
     };
     setBelongStruct(this.subSegments);
+  }
+
+  setFormat(format: string) {
+    this.format = format;
   }
 
   // 设置显示格式
@@ -242,7 +246,7 @@ export const SegmentItem: React.FC<{
       `长度：${segment.length}B`,
       `格式：${segment.displayFormat}`,
     );
-    if (segment.belongStruct !== undefined) {
+    if (segment.belongStruct.length > 0) {
       text.push(
         `所属结构体：${getSegmentByIndices(segment.belongStruct).displayFormat}([${segment.belongStruct}])`,
       );
@@ -277,7 +281,7 @@ export const SegmentItem: React.FC<{
           },
         });
 
-        if (segment.displayFormat === "undefStruct" && segment.belongStruct === undefined) {
+        if (segment.displayFormat === "undefStruct" && segment.belongStruct.length === 0) {
           // 创建格式功能：读取用户输入的名称，检测是否重名，不重名则修改格式并添加入格式管理器
           newitems.push({
             label: "定义结构体",
@@ -311,7 +315,7 @@ export const SegmentItem: React.FC<{
               },
             })),
           );
-          if (segment.belongStruct === undefined) {
+          if (segment.belongStruct.length === 0) {
             formatOptions.push(
               ...formatManager
                 .getUserFormats()
@@ -363,7 +367,7 @@ export const SegmentItem: React.FC<{
               },
             })),
           );
-          if (segment.belongStruct === undefined) {
+          if (segment.belongStruct.length === 0) {
             formatOptions.push(
               ...formatManager
                 .getUserFormats()
@@ -1135,9 +1139,9 @@ export const SegmentMenu: React.FC<{
       const belongStruct =
         parent.format === "struct"
           ? parentLocation
-          : parent.belongStruct !== undefined
+          : parent.belongStruct.length > 0
             ? [...parent.belongStruct]
-            : undefined;
+            : [];
       const newSubSegment = new Segment(
         subSegment.name,
         newStart,
@@ -1165,7 +1169,7 @@ export const SegmentMenu: React.FC<{
 
   const updateFormatByIndices = (indices: number[]) => {
     const segment = getSegmentByIndices(indices);
-    if (segment.belongStruct !== undefined) {
+    if (segment.belongStruct.length > 0) {
       const changeIndices = [...indices];
       const changeLocation = changeIndices.slice(segment.belongStruct.length);
       formatManager
@@ -1179,6 +1183,114 @@ export const SegmentMenu: React.FC<{
         });
     }
   };
+
+  // const exportToFile = () => {
+  //   const userFormats = formatManager.getUserFormats();
+
+  //   // 处理 segments 递归函数
+  //   const processSegment = (segment: Segment): any => {
+  //     if (segment.format === "struct") {
+  //       return {
+  //         name: segment.name,
+  //         format: segment.format,
+  //         structLabel: segment.displayFormat,
+  //         subSegments: segment.subSegments.map(subSeg => processSegmentName(subSeg)),
+  //       };
+  //     } else if (segment.format === "array") {
+  //       return {
+  //         name: segment.name,
+  //         format: segment.format,
+  //         arrayFormat: segment.arrayFormat,
+  //         subSegmentsName: segment.subSegments.map(subSeg => processSegmentName(subSeg)),
+  //       };
+  //     } else {
+  //       return {
+  //         name: segment.name,
+  //         format: segment.displayFormat,
+  //         length: segment.length,
+  //         subSegments: segment.subSegments.map(subSeg => processSegment(subSeg)),
+  //       };
+  //     }
+  //   };
+
+  //   // 处理 segments 名称的递归函数
+  //   const processSegmentName = (segment: Segment): any => {
+  //     return {
+  //       name: segment.name,
+  //       subSegmentsName: segment.subSegments.map(subSeg => processSegmentName(subSeg)),
+  //     };
+  //   };
+
+  //   const processedSegments = menuItems.map(item => processSegment(item));
+
+  //   // 处理 userFormats 的 subFormat
+  //   const processUserFormatSubSegments = (segment: Segment): any => {
+  //     if (segment.format === "struct") {
+  //       return {
+  //         format: segment.format,
+  //         length: segment.length,
+  //         structLabel: segment.displayFormat,
+  //       };
+  //     } else if (segment.format === "array") {
+  //       return {
+  //         format: segment.format,
+  //         arrayFormat: segment.arrayFormat,
+  //         arrayLength: segment.subSegments.length,
+  //       };
+  //     } else if (segment.subSegments.length > 0) {
+  //       return {
+  //         format: segment.displayFormat,
+  //         length: segment.length,
+  //         subFormats: segment.subSegments.map(subSeg => processUserFormatSubSegments(subSeg)),
+  //       };
+  //     } else {
+  //       return {
+  //         format: segment.displayFormat,
+  //         length: segment.length,
+  //       };
+  //     }
+  //   };
+
+  //   const processedUserFormats = userFormats.map(format => {
+  //     const correspondingFormat = formatManager.getUserFormatByLabel(format.label);
+  //     if (correspondingFormat !== undefined) {
+  //       const correspondingSegment = getSegmentByIndices(correspondingFormat.locations[0]);
+  //       const subFormat = correspondingSegment
+  //         ? processUserFormatSubSegments(correspondingSegment)
+  //         : null;
+  //       return {
+  //         label: format.label,
+  //         length: format.minBytes,
+  //         locations: format.locations,
+  //         subFormat,
+  //       };
+  //     }
+  //     // 假设有个函数可以通过 label 找到对应的 segment
+  //   });
+
+  //   // 创建要导出的数据对象
+  //   const exportData = {
+  //     userFormats: processedUserFormats,
+  //     segments: processedSegments,
+  //   };
+
+  //   // 序列化为 JSON 字符串
+  //   const jsonData = JSON.stringify(exportData, null, 2);
+
+  //   // 创建一个 Blob 对象来保存 JSON 数据
+  //   const blob = new Blob([jsonData], { type: "application/json" });
+
+  //   // 创建一个链接元素，用于触发下载
+  //   const link = document.createElement("a");
+  //   link.href = URL.createObjectURL(blob);
+  //   link.download = "formats_and_segments.json";
+
+  //   // 触发下载
+  //   link.click();
+
+  //   // 释放 URL 对象
+  //   URL.revokeObjectURL(link.href);
+  // };
 
   const exportToFile = () => {
     // 获取用户自定义格式
@@ -1214,11 +1326,65 @@ export const SegmentMenu: React.FC<{
     URL.revokeObjectURL(link.href);
   };
 
+  const importFromFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const json = e.target?.result as string;
+        const importData = JSON.parse(json);
+        updateFormatsAndSegments(importData);
+      } catch (error) {
+        console.error("导入文件解析失败:", error);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const updateFormatsAndSegments = (importData: any) => {
+    if (importData.userFormats && Array.isArray(importData.userFormats)) {
+      formatManager.resetFormats();
+      importData.userFormats.forEach((format: IFormat) => {
+        formatManager.addFormat(format);
+      });
+    }
+
+    if (importData.segments && Array.isArray(importData.segments)) {
+      const createSegmentRecursively = (data: any): Segment => {
+        const segment = new Segment(
+          data.name,
+          data.start,
+          data.end,
+          data.belongStruct,
+          data.displayFormat,
+          data.isArrayItem,
+        );
+        segment.setFormat(data.format);
+
+        segment.subSegments = data.subSegments
+          ? data.subSegments.map((subData: any) => createSegmentRecursively(subData))
+          : [];
+        return segment;
+      };
+
+      const newSegments = importData.segments.map((item: any) =>
+        createSegmentRecursively(item.segment),
+      );
+      setSelectedSegmentIndices([]);
+      setMenuItems(newSegments);
+    }
+  };
+
   return (
     <div className={style.segmentMenuContainer}>
       <button onClick={createSubSegment}>创建子分段</button>
       <button onClick={separateSelectedContent}>分隔选中内容</button>
       <button onClick={exportToFile}>导出格式和分段</button>
+      <input type="file" accept=".json" onChange={importFromFile} />
       <hr />
       {menuItems.map((item, index) => (
         <SegmentItem

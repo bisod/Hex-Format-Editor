@@ -1,0 +1,286 @@
+{
+  "userFormats": [
+    {
+      "label": "a1",
+      "minBytes": 16,
+      "locations": [
+        [
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "label": "a2",
+      "minBytes": 48,
+      "locations": [
+        [
+          0
+        ]
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "segment": {
+        "name": "分段1",
+        "start": 0,
+        "end": 47,
+        "length": 48,
+        "subSegments": [
+          {
+            "name": "分段6",
+            "start": 0,
+            "end": 15,
+            "length": 16,
+            "subSegments": [
+              {
+                "name": "分段7",
+                "start": 0,
+                "end": 3,
+                "length": 4,
+                "subSegments": [],
+                "displayFormat": "ASCII",
+                "format": "ASCII",
+                "isArrayItem": false,
+                "belongStruct": [
+                  0,
+                  0
+                ]
+              },
+              {
+                "name": "分段8",
+                "start": 4,
+                "end": 11,
+                "length": 8,
+                "subSegments": [],
+                "displayFormat": "raw",
+                "format": "raw",
+                "isArrayItem": false,
+                "belongStruct": [
+                  0,
+                  0
+                ]
+              },
+              {
+                "name": "分段9",
+                "start": 12,
+                "end": 15,
+                "length": 4,
+                "subSegments": [],
+                "displayFormat": "int32",
+                "format": "int32",
+                "isArrayItem": false,
+                "belongStruct": [
+                  0,
+                  0
+                ]
+              }
+            ],
+            "displayFormat": "a1",
+            "format": "struct",
+            "isArrayItem": false,
+            "belongStruct": [
+              0
+            ]
+          },
+          {
+            "name": "分段5",
+            "start": 16,
+            "end": 47,
+            "length": 32,
+            "subSegments": [],
+            "displayFormat": "raw",
+            "format": "raw",
+            "isArrayItem": false,
+            "belongStruct": [
+              0
+            ]
+          }
+        ],
+        "displayFormat": "a2",
+        "format": "struct",
+        "isArrayItem": false,
+        "belongStruct": []
+      },
+      "indices": [
+        0
+      ]
+    },
+    {
+      "segment": {
+        "name": "全文",
+        "start": 48,
+        "end": 95,
+        "length": 48,
+        "subSegments": [],
+        "displayFormat": "raw",
+        "format": "raw",
+        "isArrayItem": false,
+        "belongStruct": []
+      },
+      "indices": [
+        1
+      ]
+    },
+    {
+      "segment": {
+        "name": "分段3",
+        "start": 96,
+        "end": 143,
+        "length": 48,
+        "subSegments": [
+          {
+            "name": "分段10",
+            "start": 96,
+            "end": 127,
+            "length": 32,
+            "subSegments": [
+              {
+                "name": "分段10_float64_1",
+                "start": 96,
+                "end": 103,
+                "length": 8,
+                "subSegments": [],
+                "displayFormat": "float64",
+                "format": "float64",
+                "isArrayItem": true,
+                "belongStruct": []
+              },
+              {
+                "name": "分段10_float64_2",
+                "start": 104,
+                "end": 111,
+                "length": 8,
+                "subSegments": [],
+                "displayFormat": "float64",
+                "format": "float64",
+                "isArrayItem": true,
+                "belongStruct": []
+              },
+              {
+                "name": "分段10_float64_3",
+                "start": 112,
+                "end": 119,
+                "length": 8,
+                "subSegments": [],
+                "displayFormat": "float64",
+                "format": "float64",
+                "isArrayItem": true,
+                "belongStruct": []
+              },
+              {
+                "name": "分段10_float64_4",
+                "start": 120,
+                "end": 127,
+                "length": 8,
+                "subSegments": [],
+                "displayFormat": "float64",
+                "format": "float64",
+                "isArrayItem": true,
+                "belongStruct": []
+              }
+            ],
+            "displayFormat": "Array<float64>[4]",
+            "format": "array",
+            "isArrayItem": false,
+            "belongStruct": []
+          },
+          {
+            "name": "分段11",
+            "start": 128,
+            "end": 143,
+            "length": 16,
+            "subSegments": [
+              {
+                "name": "qqqq",
+                "start": 128,
+                "end": 131,
+                "length": 4,
+                "subSegments": [],
+                "displayFormat": "ASCII",
+                "format": "ASCII",
+                "isArrayItem": false,
+                "belongStruct": [
+                  2,
+                  1
+                ]
+              },
+              {
+                "name": "分段8",
+                "start": 132,
+                "end": 139,
+                "length": 8,
+                "subSegments": [],
+                "displayFormat": "raw",
+                "format": "raw",
+                "isArrayItem": false,
+                "belongStruct": [
+                  2,
+                  1
+                ]
+              },
+              {
+                "name": "分段9",
+                "start": 140,
+                "end": 143,
+                "length": 4,
+                "subSegments": [],
+                "displayFormat": "int32",
+                "format": "int32",
+                "isArrayItem": false,
+                "belongStruct": [
+                  2,
+                  1
+                ]
+              }
+            ],
+            "displayFormat": "a1",
+            "format": "struct",
+            "isArrayItem": false,
+            "belongStruct": []
+          }
+        ],
+        "displayFormat": "undefStruct",
+        "format": "undefStruct",
+        "isArrayItem": false,
+        "belongStruct": []
+      },
+      "indices": [
+        2
+      ]
+    },
+    {
+      "segment": {
+        "name": "分段2",
+        "start": 144,
+        "end": 191,
+        "length": 48,
+        "subSegments": [],
+        "displayFormat": "raw",
+        "format": "raw",
+        "isArrayItem": false,
+        "belongStruct": []
+      },
+      "indices": [
+        3
+      ]
+    },
+    {
+      "segment": {
+        "name": "分段4",
+        "start": 192,
+        "end": 671,
+        "length": 480,
+        "subSegments": [],
+        "displayFormat": "raw",
+        "format": "raw",
+        "isArrayItem": false,
+        "belongStruct": []
+      },
+      "indices": [
+        4
+      ]
+    }
+  ]
+}
