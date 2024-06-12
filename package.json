@@ -34,7 +34,7 @@
               "hover",
               "sidebar"
             ],
-            "default": "aside",
+            "default": "hover",
             "description": "%hexformateditor.inspectorType%"
           },
           "hexformateditor.maxFileSize": {

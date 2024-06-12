@@ -1,10 +1,10 @@
 .segment-menu-container {
-  width: 250px;
+  width: 200px;
   height: 85vh;
   background-color: #333;
   color: #fff;
   font-family: var(--vscode-editor-font-family);
-  padding: 20px; /* 调整padding为20px */
+  padding: 5px; /* 调整padding为20px */
   overflow-y: auto; /* 添加垂直滚动条 */
 }
 

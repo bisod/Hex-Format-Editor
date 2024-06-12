@@ -1,6 +1,12 @@
+import ClearAll from "@vscode/codicons/src/icons/clear-all.svg";
+import File from "@vscode/codicons/src/icons/file.svg";
 import ListSelection from "@vscode/codicons/src/icons/list-selection.svg";
+import SaveAs from "@vscode/codicons/src/icons/save-as.svg";
+import SplitVertical from "@vscode/codicons/src/icons/split-vertical.svg";
+import SymbolClass from "@vscode/codicons/src/icons/symbol-class.svg";
 import TriangleDown from "@vscode/codicons/src/icons/triangle-down.svg";
 import TriangleRight from "@vscode/codicons/src/icons/triangle-right.svg";
+
 import React, { useEffect, useState } from "react";
 import { useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
 import { MessageType } from "../../shared/protocol";
@@ -47,17 +53,13 @@ export class Segment {
   displayFormat: string; // 添加显示格式属性
   format: string;
   isArrayItem: boolean;
-  // arrayFormat?: string;
   belongStruct: number[];
-  // locationInStruct: number[];
 
   constructor(
     name: string,
     start: number,
     end: number,
-    // format:string = "raw",
     belongStruct: number[],
-    // locationInStruct: number[] = [],
     displayFormat: string = "raw",
     isArrayItem: boolean = false,
   ) {
@@ -153,6 +155,7 @@ export class Segment {
       this.subSegments.length = 0;
     }
     this.displayFormat = "raw";
+    this.format = "raw";
   };
   // 添加子分段
   addSubSegment(subSegment: Segment) {
@@ -196,6 +199,7 @@ export const SegmentItem: React.FC<{
   indices: number[]; // 当前分段在菜单项中的索引序列
   selectedIndices: number[]; // 当前选中的分段索引序列
   isLastSegment: boolean;
+  setMenuItems: React.Dispatch<React.SetStateAction<Segment[]>>;
   onClick: (indices: number[]) => void; // 点击事件处理函数
   mergeSegmentsUp: (indices: number[]) => void;
   mergeSegmentsDown: (indices: number[]) => void;
@@ -205,13 +209,15 @@ export const SegmentItem: React.FC<{
   splitSegmentByFormat: (segmentIndices: number[], format: string, splitLength: number) => void;
   getSegmentByIndices: (indices: number[]) => Segment;
   // findIndicesBySegment: (mysegment: Segment) => number[];
-  setFormatBySegment: (formatSegment: Segment, targetSegment: Segment) => void;
+  setFormatBySegment: (formatSegment: Segment, targetSegment: Segment, location: number[]) => void;
   updateFormatByIndices: (indices: number[]) => void;
+  replaceSegmentAtIndex: (newSegments: Segment[], segmentIndices: number[]) => Segment[];
 }> = ({
   segment,
   indices,
   selectedIndices,
   isLastSegment,
+  setMenuItems,
   onClick,
   mergeSegmentsUp,
   mergeSegmentsDown,
@@ -223,6 +229,7 @@ export const SegmentItem: React.FC<{
   // findIndicesBySegment,
   setFormatBySegment,
   updateFormatByIndices,
+  replaceSegmentAtIndex,
 }) => {
   const [isEditName, setIsEditName] = useState(false);
   const [newName, setNewName] = useState(segment.name);
@@ -293,7 +300,12 @@ export const SegmentItem: React.FC<{
           // 添加规定格式选项
           const formatOptions = formatManager
             .getBaseFormats()
-            .filter(type => segment.length >= type.minBytes && 0 === segment.length % type.minBytes)
+            .filter(
+              type =>
+                segment.length >= type.minBytes &&
+                0 === segment.length % type.minBytes &&
+                type.label !== segment.displayFormat,
+            )
             .map(type => ({
               label:
                 segment.length > type.minBytes
@@ -319,21 +331,57 @@ export const SegmentItem: React.FC<{
             formatOptions.push(
               ...formatManager
                 .getUserFormats()
-                .filter(type => segment.length === type.minBytes)
+                .filter(
+                  type =>
+                    segment.length >= type.minBytes &&
+                    0 === segment.length % type.minBytes &&
+                    type.label !== segment.displayFormat,
+                )
                 .map(type => ({
-                  label: type.label,
+                  label:
+                    segment.length > type.minBytes
+                      ? `${type.label}数组(${type.minBytes}B/段 共${segment.length / type.minBytes}段)`
+                      : type.label,
                   onClick: () => {
-                    const a = formatManager.getFormatByLabel(type.label);
-                    if (a !== undefined) {
-                      setFormatBySegment(getSegmentByIndices(a.locations[0]), segment);
+                    if (segment.length > type.minBytes) {
+                      // 计算拆分后的子分段数量
+                      const numSegments = segment.length / type.minBytes;
+                      const a = formatManager.getFormatByLabel(type.label);
+                      // 根据拆分后的数量创建子分段
+                      for (let i = 0; i < numSegments; i++) {
+                        const start = segment.start + i * type.minBytes;
+                        const end = start + type.minBytes - 1;
+                        const subSegmentName = `${segment.name}_${type.label}_${i + 1}`;
+                        const subSegment = new Segment(
+                          subSegmentName,
+                          start,
+                          end,
+                          segment.belongStruct,
+                          type.label,
+                          true,
+                        );
+                        segment.subSegments.push(subSegment);
+                        if (a !== undefined) {
+                          setFormatBySegment(getSegmentByIndices(a.locations[0]), segment, indices);
+                        }
+                      }
+
+                      segment.setDisplayFormat(type.label, true);
+                      segment.setFormat("struct");
+                    } else {
+                      const a = formatManager.getFormatByLabel(type.label);
+                      if (a !== undefined) {
+                        setFormatBySegment(getSegmentByIndices(a.locations[0]), segment, indices);
+                      }
                     }
+                    updateFormat();
                   },
                 })),
             );
           }
           if (formatOptions.length > 0) {
             newitems.push({
-              label: "修改格式",
+              label: "修改显示方式",
               onClick: () => {},
               subItems: formatOptions,
             });
@@ -371,27 +419,62 @@ export const SegmentItem: React.FC<{
             formatOptions.push(
               ...formatManager
                 .getUserFormats()
-                .filter(type => segment.length === type.minBytes)
+                .filter(
+                  type =>
+                    segment.length >= type.minBytes &&
+                    0 === segment.length % type.minBytes &&
+                    type.label !== segment.displayFormat,
+                )
                 .map(type => ({
-                  label: type.label,
+                  label:
+                    segment.length > type.minBytes
+                      ? `${type.label}数组(${type.minBytes}B/段 共${segment.length / type.minBytes}段)`
+                      : type.label,
                   onClick: () => {
-                    const a = formatManager.getFormatByLabel(type.label);
-                    if (a !== undefined) {
-                      setFormatBySegment(getSegmentByIndices(a.locations[0]), segment);
+                    if (segment.length > type.minBytes) {
+                      // 计算拆分后的子分段数量
+                      const numSegments = segment.length / type.minBytes;
+                      const a = formatManager.getFormatByLabel(type.label);
+                      // 根据拆分后的数量创建子分段
+                      for (let i = 0; i < numSegments; i++) {
+                        const start = segment.start + i * type.minBytes;
+                        const end = start + type.minBytes - 1;
+                        const subSegmentName = `${segment.name}_${type.label}_${i + 1}`;
+                        const subSegment = new Segment(
+                          subSegmentName,
+                          start,
+                          end,
+                          segment.belongStruct,
+                          type.label,
+                          true,
+                        );
+                        segment.subSegments.push(subSegment);
+                        if (a !== undefined) {
+                          setFormatBySegment(getSegmentByIndices(a.locations[0]), segment, indices);
+                        }
+                      }
+
+                      segment.setDisplayFormat(type.label, true);
+                      segment.setFormat("struct");
+                    } else {
+                      const a = formatManager.getFormatByLabel(type.label);
+                      if (a !== undefined) {
+                        setFormatBySegment(getSegmentByIndices(a.locations[0]), segment, indices);
+                      }
                     }
-                    // formatManager.addLocationByLabel(type.label, indices);
+                    updateFormat();
                   },
                 })),
             );
           }
           if (formatOptions.length > 0) {
             newitems.push({
-              label: "设置显示格式",
+              label: "设置显示方式",
               onClick: () => {},
               subItems: formatOptions,
             });
           }
-          // 不具备子结构的单元格式
+
           const formatSplit = formatManager
             .getBaseFormats()
             .filter(type => segment.length > type.minBytes && 0 === segment.length % type.minBytes)
@@ -399,6 +482,58 @@ export const SegmentItem: React.FC<{
               label: `${type.label}(${type.minBytes}B/段 共${segment.length / type.minBytes}段)`,
               onClick: () => splitSegmentByFormat(indices, type.label, type.minBytes),
             }));
+
+          formatSplit.push(
+            ...formatManager
+              .getUserFormats()
+              .filter(
+                type =>
+                  segment.length > type.minBytes &&
+                  0 === segment.length % type.minBytes &&
+                  type.label !== segment.displayFormat,
+              )
+              .map(type => ({
+                label: `${type.label}(${type.minBytes}B/段 共${segment.length / type.minBytes}段)`,
+                onClick: () => {
+                  if (segment.subSegments.length > 0) {
+                    showWarningMessage(`已经拥有分段格式，不可划分，请清除分段后再尝试`);
+                    return;
+                  }
+                  const numSegments = segment.length / type.minBytes;
+                  const a = formatManager.getFormatByLabel(type.label);
+                  const newHandleSegments: Segment[] = [];
+                  // 根据拆分后的数量创建子分段
+                  for (let i = 0; i < numSegments; i++) {
+                    const start = segment.start + i * type.minBytes;
+                    const end = start + type.minBytes - 1;
+                    const subSegmentName = `${segment.name}_${type.label}_${i + 1}`;
+                    const newHandleSegment = new Segment(
+                      subSegmentName,
+                      start,
+                      end,
+                      segment.belongStruct,
+                      type.label,
+                    );
+                    const newindices = [...indices];
+                    newindices[newindices.length - 1] += i;
+                    if (a !== undefined) {
+                      setFormatBySegment(
+                        getSegmentByIndices(a.locations[0]),
+                        newHandleSegment,
+                        newindices,
+                      );
+                    }
+                    newHandleSegments.push(newHandleSegment);
+                  }
+
+                  setMenuItems(replaceSegmentAtIndex(newHandleSegments, indices));
+
+                  segment.setDisplayFormat(type.label);
+                  segment.setFormat("struct");
+                  updateFormat();
+                },
+              })),
+          );
           if (formatSplit.length > 0) {
             newitems.push({
               label: "划分当前分段",
@@ -561,6 +696,7 @@ export const SegmentItem: React.FC<{
               indices={[...indices, index]} // 更新子分段的索引序列
               isLastSegment={index + 1 === segment.subSegments.length}
               selectedIndices={selectedIndices} // 传递父级的选中分段索引序列
+              setMenuItems={setMenuItems}
               onClick={onClick} // 透传点击事件处理函数
               mergeSegmentsUp={mergeSegmentsUp}
               mergeSegmentsDown={mergeSegmentsDown}
@@ -572,6 +708,7 @@ export const SegmentItem: React.FC<{
               // findIndicesBySegment={findIndicesBySegment}
               setFormatBySegment={setFormatBySegment}
               updateFormatByIndices={updateFormatByIndices}
+              replaceSegmentAtIndex={replaceSegmentAtIndex}
             />
           ))}
         </div>
@@ -590,7 +727,8 @@ export const SegmentMenu: React.FC<{
   showToolTip: (showText: string[], mouseX: number, mouseY: number) => void;
   hideToolTip: () => void;
   openContextMenu: (myitems: MenuItem[], mouseX: number, mouseY: number) => void;
-}> = ({ showToolTip, hideToolTip, openContextMenu, menuItems, setMenuItems }) => {
+  initSegmentMenu: () => void;
+}> = ({ showToolTip, hideToolTip, openContextMenu, menuItems, setMenuItems, initSegmentMenu }) => {
   const ctx = useDisplayContext();
   const [selectedSegmentIndices, setSelectedSegmentIndices] = useState<number[]>([]); // 选中的分段索引序列
   const [nameIndex, setNameIndex] = useState(1);
@@ -613,10 +751,6 @@ export const SegmentMenu: React.FC<{
       );
     }
     setSelectedSegmentIndices(indices); // 更新选中分段的索引序列
-  };
-
-  const closeSelectedSegmentWindow = () => {
-    setSelectedSegmentIndices([]);
   };
 
   // 定义一个函数来设置编辑状态
@@ -1114,10 +1248,16 @@ export const SegmentMenu: React.FC<{
     setSelectedSegmentIndices([]); // 更新选中分段的索引序列
   };
 
-  const setFormatBySegment = (formatSegment: Segment, targetSegment: Segment) => {
-    const location = findIndicesBySegment(targetSegment, menuItems);
+  const setFormatBySegment = (
+    formatSegment: Segment,
+    targetSegment: Segment,
+    location: number[],
+  ) => {
+    // const location = findIndicesBySegment(targetSegment, menuItems);
     if (targetSegment.format === "struct") {
       formatManager.removeLocationByLabel(targetSegment.displayFormat, location);
+    }
+    if (formatSegment.format === "struct") {
       formatManager.addLocationByLabel(targetSegment.displayFormat, location);
     }
     targetSegment.format = formatSegment.format;
@@ -1178,7 +1318,8 @@ export const SegmentMenu: React.FC<{
           const targetIndices = [...value, ...changeLocation];
           if (areListsNotEqual(targetIndices, changeIndices)) {
             const targetSegment = getSegmentByIndices(targetIndices);
-            setFormatBySegment(segment, targetSegment);
+            const location = findIndicesBySegment(targetSegment, menuItems);
+            setFormatBySegment(segment, targetSegment, location);
           }
         });
     }
@@ -1381,10 +1522,35 @@ export const SegmentMenu: React.FC<{
 
   return (
     <div className={style.segmentMenuContainer}>
-      <button onClick={createSubSegment}>创建子分段</button>
-      <button onClick={separateSelectedContent}>分隔选中内容</button>
-      <button onClick={exportToFile}>导出格式和分段</button>
-      <input type="file" accept=".json" onChange={importFromFile} />
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+        <SymbolClass onClick={createSubSegment} />
+        <SplitVertical onClick={separateSelectedContent} />
+        <ClearAll onClick={initSegmentMenu} />
+        <SaveAs onClick={exportToFile} />
+        <div style={{ position: "relative", display: "inline-block" }}>
+          {/* 图标部分 */}
+          <File />
+          {/* 隐藏的文件输入 */}
+          <input
+            type="file"
+            accept=".json"
+            onChange={importFromFile}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              opacity: 0,
+              cursor: "pointer",
+            }}
+          />
+        </div>
+      </div>
+      {/* <button onClick={createSubSegment}>创建子分段</button>
+      <button onClick={separateSelectedContent}>划分数据段</button>
+      <button onClick={exportToFile}>导出文件格式</button>
+      <input type="file" accept=".json" onChange={importFromFile} /> */}
       <hr />
       {menuItems.map((item, index) => (
         <SegmentItem
@@ -1393,6 +1559,7 @@ export const SegmentMenu: React.FC<{
           indices={[index]} // 根分段的索引序列是其在菜单项中的索引
           isLastSegment={index + 1 === menuItems.length}
           selectedIndices={selectedSegmentIndices} // 传递选中分段的索引序列
+          setMenuItems={setMenuItems}
           onClick={(clickedIndices: number[]) => handleMenuItemClick(clickedIndices)}
           mergeSegmentsUp={(indices: number[]) => mergeSegmentsUp(indices)}
           mergeSegmentsDown={(indices: number[]) => mergeSegmentsDown(indices)}
@@ -1404,14 +1571,9 @@ export const SegmentMenu: React.FC<{
           // findIndicesBySegment={findIndicesBySegment}
           setFormatBySegment={setFormatBySegment}
           updateFormatByIndices={updateFormatByIndices}
+          replaceSegmentAtIndex={replaceSegmentAtIndex}
         />
       ))}
-      {selectedSegmentIndices.length > 0 && (
-        <div className={style.selectedSegmentWindow}>
-          <span>选中分段: {selectedSegmentIndices}</span>
-          <button onClick={closeSelectedSegmentWindow}>关闭</button>
-        </div>
-      )}
     </div>
   );
 };

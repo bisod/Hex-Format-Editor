@@ -55,11 +55,15 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   position,
 }) => {
   const [subMenuIndex, setSubMenuIndex] = useState<number | null>(null);
+  const [subVisible, setSubVisible] = useState<boolean>(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const subMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setSubMenuIndex(null);
+        setSubVisible(false);
         onClose();
       }
     };
@@ -75,16 +79,54 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     };
   }, [isVisible, onClose]);
 
+  // useEffect(() => {
+  //   if (isVisible && menuRef.current) {
+  //     const rect = menuRef.current.getBoundingClientRect();
+  //     const bottomSpace = window.innerHeight - rect.bottom;
+  //     const rightSpace = window.innerWidth - rect.right;
+
+  //     if (bottomSpace < 0) {
+  //       menuRef.current.style.top = `${position.top + bottomSpace}px`;
+  //     }
+
+  //     if (rightSpace < 0) {
+  //       menuRef.current.style.left = `${position.left + rightSpace}px`;
+  //     }
+  //   }
+  // }, [isVisible, position]);
+
   useEffect(() => {
     if (isVisible && menuRef.current) {
       const rect = menuRef.current.getBoundingClientRect();
       const bottomSpace = window.innerHeight - rect.bottom;
+      const rightSpace = window.innerWidth - rect.right;
 
       if (bottomSpace < 0) {
         menuRef.current.style.top = `${position.top + bottomSpace}px`;
       }
+
+      if (rightSpace < 0) {
+        menuRef.current.style.left = `${position.left + rightSpace}px`;
+      }
     }
   }, [isVisible, position]);
+
+  useEffect(() => {
+    if (subVisible && menuRef.current && subMenuRef.current) {
+      const menuRect = menuRef.current.getBoundingClientRect();
+      const subMenuRect = subMenuRef.current.getBoundingClientRect();
+
+      // Adjust sub menu position if it is outside the screen horizontally
+      if (menuRect.right + subMenuRect.width > window.innerWidth) {
+        subMenuRef.current.style.left = `-${subMenuRect.width}px`;
+      }
+
+      // Adjust sub menu position if it is outside the screen vertically
+      if (menuRect.bottom + subMenuRect.height > window.innerHeight) {
+        subMenuRef.current.style.top = `-${subMenuRect.height - 30}px`;
+      }
+    }
+  }, [subVisible]);
 
   const handleItemClick = (onClick: () => void) => {
     onClick();
@@ -93,6 +135,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 
   const handleSubMenuClick = (index: number) => {
     setSubMenuIndex(index === subMenuIndex ? null : index);
+    setSubVisible(index === subMenuIndex ? false : true);
   };
 
   return (
@@ -109,7 +152,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           {items.map((item, index) => (
             <div key={index} style={{ position: "relative" }}>
               <div
-                className={style.item}
+                className={`${style.item} ${subMenuIndex === index ? style.selected : ""}`}
                 onClick={() => {
                   if (item.subItems) {
                     handleSubMenuClick(index);
@@ -120,8 +163,9 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
               >
                 {item.label}
               </div>
-              {item.subItems && index === subMenuIndex && (
+              {item.subItems && subVisible && index === subMenuIndex && (
                 <div
+                  ref={subMenuRef}
                   className={style.subItem}
                   style={{
                     left: "100%",

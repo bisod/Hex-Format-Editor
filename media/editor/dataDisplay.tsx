@@ -439,7 +439,6 @@ interface IRawSlice {
   format: string;
   length: number;
   isdisplay: boolean;
-  // display: string | undefined;
 }
 
 const DataPageContents: React.FC<IDataPageProps> = props => {
@@ -831,9 +830,11 @@ const DataRowContents: React.FC<{
         (rawSlice.format === "raw" ? (
           <DataCellGroup>{chars}</DataCellGroup>
         ) : (
-          <FormatDataDisplay width={width} length={rawSlice.length} offset={rawSlice.location}>
-            {getFormatByLabel(rawSlice.format)?.convert(dv, le)}
-          </FormatDataDisplay>
+          showDecodedText && (
+            <FormatDataDisplay width={width} length={rawSlice.length} offset={rawSlice.location}>
+              {getFormatByLabel(rawSlice.format)?.convert(dv, le)}
+            </FormatDataDisplay>
+          )
         ))}
     </>
   );

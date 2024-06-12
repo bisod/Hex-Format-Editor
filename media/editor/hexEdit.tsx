@@ -79,6 +79,11 @@ const Editor: React.FC = () => {
   // const [segmentMenu, setSegmentMenu] = useState<Segment[]>(); // 第一个分段为全文
   const fileSize = useRecoilValue(select.fileSize) ?? 0; // 如果为undefined，则默认为0
   const [segmentMenu, setSegmentMenu] = useState([new Segment("全文", 0, fileSize - 1, [])]); // 第一个分段为全文
+
+  const initSegmentMenu = () => {
+    // const _fileSize = useRecoilValue(select.fileSize) ?? 0; // 如果为undefined，则默认为0
+    setSegmentMenu([new Segment("全文", 0, fileSize - 1, [])]);
+  };
   // const [editSegment, setEditSegment] = useState<Segment | null>(null); // 控制是否显示编辑组件
   const [tooltipProps, setTooltipProps] = useState<TooltipProps>({
     isVisible: false,
@@ -157,6 +162,7 @@ const Editor: React.FC = () => {
         showToolTip={showToolTip}
         hideToolTip={hideToolTip}
         openContextMenu={openContextMenu}
+        initSegmentMenu={initSegmentMenu}
       />
 
       <div

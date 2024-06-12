@@ -63,15 +63,16 @@ export const DataInspectorHover: React.FC = () => {
     return () => disposable.dispose();
   }, []);
 
-  if (!inspected || !anchor || started === undefined) {
+  if (!anchor || started === undefined) {
     return null;
   }
 
   return (
     <VsTooltipPopover anchor={anchor} hide={() => setInspected(undefined)} visible={true}>
-      <Suspense fallback={strings.loadingDotDotDot}>
+      {/* <h2>常规数据结构解析</h2> */}
+      <Suspense fallback={null}>
         {/* 渲染数据检查器 */}
-        <InspectorContents columns={4} offset={started} lookahead={lookahead} />
+        <InspectorContents columns={2} offset={started} lookahead={lookahead} />
       </Suspense>
     </VsTooltipPopover>
   );
