@@ -74,6 +74,7 @@ const Editor: React.FC = () => {
 
   // 获取是否是大文件的状态值
   const isLargeFile = useRecoilValue(select.isLargeFile);
+  console.log(isLargeFile);
   // 获取是否绕过大文件提示的状态值和设置该状态的状态钩子
   const [bypassLargeFilePrompt, setBypassLargeFile] = useRecoilState(select.bypassLargeFilePrompt);
   // const [segmentMenu, setSegmentMenu] = useState<Segment[]>(); // 第一个分段为全文
