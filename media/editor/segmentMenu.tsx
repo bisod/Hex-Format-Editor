@@ -1,4 +1,4 @@
-import ClearAll from "@vscode/codicons/src/icons/clear-all.svg";
+// import ClearAll from "@vscode/codicons/src/icons/clear-all.svg";
 import File from "@vscode/codicons/src/icons/file.svg";
 import ListSelection from "@vscode/codicons/src/icons/list-selection.svg";
 import SaveAs from "@vscode/codicons/src/icons/save-as.svg";
@@ -327,58 +327,58 @@ export const SegmentItem: React.FC<{
               },
             })),
           );
-          if (segment.belongStruct.length === 0) {
-            formatOptions.push(
-              ...formatManager
-                .getUserFormats()
-                .filter(
-                  type =>
-                    segment.length >= type.minBytes &&
-                    0 === segment.length % type.minBytes &&
-                    type.label !== segment.displayFormat,
-                )
-                .map(type => ({
-                  label:
-                    segment.length > type.minBytes
-                      ? `${type.label}数组(${type.minBytes}B/段 共${segment.length / type.minBytes}段)`
-                      : type.label,
-                  onClick: () => {
-                    if (segment.length > type.minBytes) {
-                      // 计算拆分后的子分段数量
-                      const numSegments = segment.length / type.minBytes;
-                      const a = formatManager.getFormatByLabel(type.label);
-                      // 根据拆分后的数量创建子分段
-                      for (let i = 0; i < numSegments; i++) {
-                        const start = segment.start + i * type.minBytes;
-                        const end = start + type.minBytes - 1;
-                        const subSegmentName = `${segment.name}_${type.label}_${i + 1}`;
-                        const subSegment = new Segment(
-                          subSegmentName,
-                          start,
-                          end,
-                          segment.belongStruct,
-                          type.label,
-                          true,
-                        );
-                        segment.subSegments.push(subSegment);
-                        if (a !== undefined) {
-                          setFormatBySegment(getSegmentByIndices(a.locations[0]), segment, indices);
-                        }
-                      }
+          // if (segment.belongStruct.length === 0) {
+          //   formatOptions.push(
+          //     ...formatManager
+          //       .getUserFormats()
+          //       .filter(
+          //         type =>
+          //           segment.length >= type.minBytes &&
+          //           0 === segment.length % type.minBytes &&
+          //           type.label !== segment.displayFormat,
+          //       )
+          //       .map(type => ({
+          //         label:
+          //           segment.length > type.minBytes
+          //             ? `${type.label}数组(${type.minBytes}B/段 共${segment.length / type.minBytes}段)`
+          //             : type.label,
+          //         onClick: () => {
+          //           if (segment.length > type.minBytes) {
+          //             // 计算拆分后的子分段数量
+          //             const numSegments = segment.length / type.minBytes;
+          //             const a = formatManager.getFormatByLabel(type.label);
+          //             // 根据拆分后的数量创建子分段
+          //             for (let i = 0; i < numSegments; i++) {
+          //               const start = segment.start + i * type.minBytes;
+          //               const end = start + type.minBytes - 1;
+          //               const subSegmentName = `${segment.name}_${type.label}_${i + 1}`;
+          //               const subSegment = new Segment(
+          //                 subSegmentName,
+          //                 start,
+          //                 end,
+          //                 segment.belongStruct,
+          //                 type.label,
+          //                 true,
+          //               );
+          //               segment.subSegments.push(subSegment);
+          //               if (a !== undefined) {
+          //                 setFormatBySegment(getSegmentByIndices(a.locations[0]), segment, indices);
+          //               }
+          //             }
 
-                      segment.setDisplayFormat(type.label, true);
-                      segment.setFormat("struct");
-                    } else {
-                      const a = formatManager.getFormatByLabel(type.label);
-                      if (a !== undefined) {
-                        setFormatBySegment(getSegmentByIndices(a.locations[0]), segment, indices);
-                      }
-                    }
-                    updateFormat();
-                  },
-                })),
-            );
-          }
+          //             segment.setDisplayFormat(type.label, true);
+          //             segment.setFormat("struct");
+          //           } else {
+          //             const a = formatManager.getFormatByLabel(type.label);
+          //             if (a !== undefined) {
+          //               setFormatBySegment(getSegmentByIndices(a.locations[0]), segment, indices);
+          //             }
+          //           }
+          //           updateFormat();
+          //         },
+          //       })),
+          //   );
+          // }
           if (formatOptions.length > 0) {
             newitems.push({
               label: "修改显示方式",
@@ -415,58 +415,58 @@ export const SegmentItem: React.FC<{
               },
             })),
           );
-          if (segment.belongStruct.length === 0) {
-            formatOptions.push(
-              ...formatManager
-                .getUserFormats()
-                .filter(
-                  type =>
-                    segment.length >= type.minBytes &&
-                    0 === segment.length % type.minBytes &&
-                    type.label !== segment.displayFormat,
-                )
-                .map(type => ({
-                  label:
-                    segment.length > type.minBytes
-                      ? `${type.label}数组(${type.minBytes}B/段 共${segment.length / type.minBytes}段)`
-                      : type.label,
-                  onClick: () => {
-                    if (segment.length > type.minBytes) {
-                      // 计算拆分后的子分段数量
-                      const numSegments = segment.length / type.minBytes;
-                      const a = formatManager.getFormatByLabel(type.label);
-                      // 根据拆分后的数量创建子分段
-                      for (let i = 0; i < numSegments; i++) {
-                        const start = segment.start + i * type.minBytes;
-                        const end = start + type.minBytes - 1;
-                        const subSegmentName = `${segment.name}_${type.label}_${i + 1}`;
-                        const subSegment = new Segment(
-                          subSegmentName,
-                          start,
-                          end,
-                          segment.belongStruct,
-                          type.label,
-                          true,
-                        );
-                        segment.subSegments.push(subSegment);
-                        if (a !== undefined) {
-                          setFormatBySegment(getSegmentByIndices(a.locations[0]), segment, indices);
-                        }
-                      }
+          // if (segment.belongStruct.length === 0) {
+          //   formatOptions.push(
+          //     ...formatManager
+          //       .getUserFormats()
+          //       .filter(
+          //         type =>
+          //           segment.length >= type.minBytes &&
+          //           0 === segment.length % type.minBytes &&
+          //           type.label !== segment.displayFormat,
+          //       )
+          //       .map(type => ({
+          //         label:
+          //           segment.length > type.minBytes
+          //             ? `${type.label}数组(${type.minBytes}B/段 共${segment.length / type.minBytes}段)`
+          //             : type.label,
+          //         onClick: () => {
+          //           if (segment.length > type.minBytes) {
+          //             // 计算拆分后的子分段数量
+          //             const numSegments = segment.length / type.minBytes;
+          //             const a = formatManager.getFormatByLabel(type.label);
+          //             // 根据拆分后的数量创建子分段
+          //             for (let i = 0; i < numSegments; i++) {
+          //               const start = segment.start + i * type.minBytes;
+          //               const end = start + type.minBytes - 1;
+          //               const subSegmentName = `${segment.name}_${type.label}_${i + 1}`;
+          //               const subSegment = new Segment(
+          //                 subSegmentName,
+          //                 start,
+          //                 end,
+          //                 segment.belongStruct,
+          //                 type.label,
+          //                 true,
+          //               );
+          //               segment.subSegments.push(subSegment);
+          //               if (a !== undefined) {
+          //                 setFormatBySegment(getSegmentByIndices(a.locations[0]), segment, indices);
+          //               }
+          //             }
 
-                      segment.setDisplayFormat(type.label, true);
-                      segment.setFormat("struct");
-                    } else {
-                      const a = formatManager.getFormatByLabel(type.label);
-                      if (a !== undefined) {
-                        setFormatBySegment(getSegmentByIndices(a.locations[0]), segment, indices);
-                      }
-                    }
-                    updateFormat();
-                  },
-                })),
-            );
-          }
+          //             segment.setDisplayFormat(type.label, true);
+          //             segment.setFormat("struct");
+          //           } else {
+          //             const a = formatManager.getFormatByLabel(type.label);
+          //             if (a !== undefined) {
+          //               setFormatBySegment(getSegmentByIndices(a.locations[0]), segment, indices);
+          //             }
+          //           }
+          //           updateFormat();
+          //         },
+          //       })),
+          //   );
+          // }
           if (formatOptions.length > 0) {
             newitems.push({
               label: "设置显示方式",
@@ -1525,7 +1525,7 @@ export const SegmentMenu: React.FC<{
       <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
         <SymbolClass onClick={createSubSegment} />
         <SplitVertical onClick={separateSelectedContent} />
-        <ClearAll onClick={initSegmentMenu} />
+        {/* <ClearAll onClick={initSegmentMenu} /> */}
         <SaveAs onClick={exportToFile} />
         <div style={{ position: "relative", display: "inline-block" }}>
           {/* 图标部分 */}
